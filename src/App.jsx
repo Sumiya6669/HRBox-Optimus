@@ -17,6 +17,7 @@ import PageNotFound from '@/lib/PageNotFound';
 const PortalShell = lazy(() => import('@/components/layout/PortalShell'));
 const Login = lazy(() => import('@/pages/auth/Login'));
 const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
+const AcceptInvite = lazy(() => import('@/pages/auth/AcceptInvite'));
 
 const CompanyHome = lazy(() => import('@/pages/company/CompanyHome'));
 const CmsPage = lazy(() => import('@/pages/company/CmsPage'));
@@ -85,6 +86,8 @@ function AppRoutes() {
         {/* Публичная зона: вход и опубликованные CMS-страницы */}
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Регистрация по ссылке-приглашению — до входа в систему */}
+        <Route path="/invite/:token" element={<AcceptInvite />} />
 
         {/* Портал — только для аутентифицированных (BUG-001) */}
         <Route element={<RequireAuth />}>

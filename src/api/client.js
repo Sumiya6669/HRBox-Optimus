@@ -37,6 +37,7 @@ const entities = {
   Notification: createEntity('notifications', { defaultSort: '-date' }),
   OnboardingTask: createEntity('onboarding_tasks'),
   Page: createEntity('pages', { defaultSort: '-updated_date' }),
+  Invitation: createEntity('invitations', { defaultSort: '-created_date' }),
   Process: createEntity('processes', { defaultSort: 'sort_order' }),
   ProcessCategory: createEntity('process_categories', { defaultSort: 'sort_order' }),
   ProcessStage: createEntity('process_stages', { defaultSort: 'sort_order' }),
@@ -185,6 +186,49 @@ const users = {
     if (error) throw new DataError(error.message || 'Не удалось отправить приглашение', { status: error.status });
     return data;
   },
+  /**
+   * Ссылка-приглашение. Открытый токен возвращается ровно один раз —
+   * в базе хранится только его хеш, «подсмотреть» ссылку позже нельзя.
+   */
+  async createInvitation({ email, role = 'employee', fullName, days = 14, employeeId } = {}) {
+    const { data, error } = await supabase.rpc('create_invitation', {
+      p_email: email?.trim() || null,
+      p_role: role,
+      p_full_name: fullName?.trim() || null,
+      p_days: days,
+      p_employee_id: employeeId || null,
+    });
+    if (error) throw new DataError(error.message || 'Не удалось создать приглашение', { status: error.status, code: error.code });
+    return { ...data, url: `${window.location.origin}/invite/${data.token}` };
+  },
+
+  async revokeInvitation(id) {
+    const { error } = await supabase.rpc('revoke_invitation', { p_id: id });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return true;
+  },
+
+  /** Проверка ссылки до входа: валидна ли и на кого выписана. */
+  async checkInvitation(token) {
+    const { data, error } = await supabase.rpc('check_invitation', { p_token: token });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || { valid: false };
+  },
+
+  /** Регистрация по ссылке. Роль берётся из приглашения на сервере. */
+  async acceptInvitation({ token, password, email, fullName }) {
+    const { data, error } = await supabase.functions.invoke('accept-invite', {
+      body: { token, password, email, full_name: fullName },
+    });
+    if (error) {
+      let message = 'Не удалось завершить регистрацию';
+      try { message = (await error.context?.json())?.error || message; } catch { /* тело недоступно */ }
+      throw new DataError(message, { status: error.status });
+    }
+    if (data?.error) throw new DataError(data.error, { status: 400 });
+    return data;
+  },
+
   async setRole(userId, role) {
     const { data, error } = await supabase.functions.invoke('set-user-role', { body: { userId, role } });
     if (error) throw new DataError(error.message || 'Не удалось изменить роль', { status: error.status });

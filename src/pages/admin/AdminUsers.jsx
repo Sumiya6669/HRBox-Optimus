@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   UserPlus, Search, Users as UsersIcon, Mail, Link2, ChevronDown, ChevronLeft, ChevronRight,
-  MailCheck, ShieldCheck,
+  MailCheck, ShieldCheck, Copy, Check,
 } from 'lucide-react';
 
 import { api } from '@/api/client';
@@ -82,6 +82,9 @@ export default function AdminUsers() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('employee');
   const [inviteTouched, setInviteTouched] = useState(false);
+  // Ссылка-приглашение: открытый токен приходит один раз, дальше в базе только хеш.
+  const [inviteLink, setInviteLink] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [linkTarget, setLinkTarget] = useState(null); // профиль, которому выбираем сотрудника
   const [linkEmployeeId, setLinkEmployeeId] = useState('');
@@ -172,6 +175,8 @@ export default function AdminUsers() {
     qc.invalidateQueries({ queryKey: ['admin-users-invites'] });
   };
 
+  const invalidateInvites = () => qc.invalidateQueries({ queryKey: ['admin-invitation-links'] });
+
   const invite = useMutation({
     mutationFn: () => api.users.inviteUser(inviteEmail.trim(), inviteRole),
     onSuccess: () => {
@@ -184,6 +189,36 @@ export default function AdminUsers() {
     onError: (e) =>
       toast({ variant: 'destructive', title: 'Не удалось отправить приглашение', description: e?.message }),
   });
+
+  /**
+   * Ссылка-приглашение вместо письма: встроенная почта Supabase ограничена
+   * несколькими письмами в час, а свой SMTP подключён не всегда. Ссылку можно
+   * передать любым каналом — в мессенджере или лично при оформлении.
+   */
+  const createLink = useMutation({
+    mutationFn: () =>
+      api.users.createInvitation({
+        email: inviteEmail.trim() || null,
+        role: inviteRole,
+      }),
+    onSuccess: (data) => {
+      setInviteLink(data);
+      setLinkCopied(false);
+      invalidateInvites();
+    },
+    onError: (e) =>
+      toast({ variant: 'destructive', title: 'Не удалось создать ссылку', description: e?.message }),
+  });
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink.url);
+      setLinkCopied(true);
+      toast({ title: 'Ссылка скопирована' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Не удалось скопировать', description: 'Выделите ссылку и скопируйте вручную.' });
+    }
+  };
 
   // BUG-034: роль меняет серверная Edge-функция (проверка прав и запись в журнал аудита).
   const changeRole = useMutation({
@@ -469,13 +504,67 @@ export default function AdminUsers() {
               Пригласить в портал
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Пользователь получит письмо со ссылкой для входа. Роль можно изменить позже на вкладке
-              «Пользователи».
+              Ссылку можно передать любым способом — в мессенджере или лично. Письмо требует
+              настроенного SMTP: встроенная почта Supabase ограничена несколькими письмами в час.
+              Роль изменяется позже на вкладке «Пользователи».
             </p>
-            <Button onClick={() => setInviteOpen(true)}>
-              <UserPlus className="w-4 h-4" aria-hidden="true" />
-              Отправить приглашение
-            </Button>
+
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end mb-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="link-email">Email (необязательно)</Label>
+                <Input
+                  id="link-email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => { setInviteEmail(e.target.value); setInviteLink(null); }}
+                  placeholder="ivanov@optimus-kz.kz"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="link-role">Роль</Label>
+                <select
+                  id="link-role"
+                  value={inviteRole}
+                  onChange={(e) => { setInviteRole(e.target.value); setInviteLink(null); }}
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm min-h-[40px]"
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                  ))}
+                </select>
+              </div>
+              <Button onClick={() => createLink.mutate()} disabled={createLink.isPending}>
+                <Link2 className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                Создать ссылку
+              </Button>
+            </div>
+
+            {inviteLink && (
+              <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Ссылка действует до {formatDate(inviteLink.expires_at, 'long')} и сработает один раз.
+                  Показывается только сейчас — потом её можно лишь выпустить заново.
+                </p>
+                <div className="flex gap-2">
+                  <Input readOnly value={inviteLink.url} onFocus={(e) => e.target.select()} className="font-mono text-xs" />
+                  <Button variant="outline" onClick={copyLink} aria-label="Скопировать ссылку">
+                    {linkCopied
+                      ? <Check className="w-4 h-4" aria-hidden="true" />
+                      : <Copy className="w-4 h-4" aria-hidden="true" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <details className="mt-3">
+              <summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground">
+                Отправить письмом (нужен настроенный SMTP)
+              </summary>
+              <Button variant="outline" className="mt-2" onClick={() => setInviteOpen(true)}>
+                <UserPlus className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                Отправить приглашение на почту
+              </Button>
+            </details>
           </Card>
 
           <Card className="overflow-hidden">
