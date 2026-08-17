@@ -155,6 +155,10 @@ const auth = {
 
 function translateAuthError(message = '') {
   const m = message.toLowerCase();
+  // Сетевой сбой Supabase-клиент отдаёт как «Failed to fetch» — по-английски и без объяснения.
+  if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed')) {
+    return 'Не удалось связаться с сервером. Проверьте подключение к интернету и попробуйте снова.';
+  }
   if (m.includes('invalid login credentials')) return 'Неверный email или пароль';
   if (m.includes('email not confirmed')) return 'Email не подтверждён — проверьте почту';
   if (m.includes('user already registered')) return 'Пользователь с таким email уже существует';
