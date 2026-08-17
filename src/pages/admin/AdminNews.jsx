@@ -12,6 +12,7 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import ImageUpload from '@/components/common/ImageUpload';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,6 +74,7 @@ const emptyForm = () => ({
   excerpt: '',
   category: 'company',
   image_url: '',
+  image_path: '',
   published_date: formatDate(new Date(), 'iso'),
   pinned: false,
   status: 'draft',
@@ -90,9 +92,8 @@ function validate(form) {
   if (form.status === 'scheduled' && form.published_date && daysBetween(new Date(), form.published_date) <= 0) {
     errors.published_date = 'Для отложенной публикации выберите будущую дату';
   }
-  if (form.image_url && !/^https?:\/\//i.test(form.image_url)) {
-    errors.image_url = 'Ссылка должна начинаться с http:// или https://';
-  }
+  // Изображение необязательно и задаётся файлом (ImageUpload), поэтому проверять
+  // формат ссылки больше не нужно: адрес приходит от Storage либо из старой записи.
   return errors;
 }
 
@@ -190,7 +191,8 @@ export default function AdminNews() {
         body: payload.body.trim(),
         excerpt: payload.excerpt.trim() || null,
         category: payload.category,
-        image_url: payload.image_url.trim() || null,
+        image_url: payload.image_url?.trim() || null,
+        image_path: payload.image_path?.trim() || null,
         published_date: payload.published_date,
         pinned: payload.pinned,
         status: payload.status,
@@ -295,6 +297,7 @@ export default function AdminNews() {
       excerpt: item.excerpt || '',
       category: item.category || 'company',
       image_url: item.image_url || '',
+      image_path: item.image_path || '',
       published_date: formatDate(item.published_date, 'iso'),
       pinned: !!item.pinned,
       status: item.status || 'draft',
@@ -311,7 +314,7 @@ export default function AdminNews() {
   };
 
   const submit = () => {
-    setTouched({ title: true, body: true, category: true, published_date: true, image_url: true });
+    setTouched({ title: true, body: true, category: true, published_date: true });
     if (!isValid) return;
     save.mutate(form);
   };
@@ -749,21 +752,18 @@ export default function AdminNews() {
                 )}
               </div>
 
-              <div>
-                <Label htmlFor="news-image">Ссылка на изображение</Label>
-                <Input
-                  id="news-image"
-                  value={form.image_url}
-                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                  onBlur={() => setTouched((t) => ({ ...t, image_url: true }))}
-                  placeholder="https://…"
-                  aria-invalid={!!showError('image_url')}
-                  className="min-h-[40px]"
-                />
-                {showError('image_url') && (
-                  <p role="alert" className="mt-1 text-xs text-destructive">{showError('image_url')}</p>
-                )}
-              </div>
+              {/* Обложка задаётся файлом, а не ссылкой (CONVENTIONS §10). */}
+              <ImageUpload
+                id="news-image"
+                className="sm:col-span-2"
+                value={form.image_url}
+                path={form.image_path}
+                folder="news"
+                label="Обложка новости"
+                aspect="wide"
+                hint="Необязательно. Показывается в ленте и на странице новости."
+                onChange={({ url, path }) => setForm((f) => ({ ...f, image_url: url, image_path: path }))}
+              />
             </div>
 
             <div className="flex items-center gap-2 min-h-[40px]">

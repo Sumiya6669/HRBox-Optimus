@@ -4,7 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   LayoutDashboard, User, Settings, Search, Bell, LogOut, Menu, X, ChevronDown,
   Briefcase, GraduationCap, Target, TrendingUp, CalendarDays, Wallet, BookOpen,
-  Award, FileText, Star, FolderOpen, Newspaper, BarChart3, Users, Building2,
+  Award, FileText, Star, FolderOpen, Newspaper, BarChart3, Users, Building2, Workflow, Inbox,
   MessageSquare, Zap, Store, ClipboardList, ScrollText, PanelLeftClose,
   PanelLeftOpen, Layers, FileBarChart, Loader2, CheckCheck, CornerDownLeft,
 } from "lucide-react";
@@ -12,6 +12,7 @@ import {
 import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import OptimusLogo from "@/components/common/OptimusLogo";
+import SafeImage from "@/components/common/SafeImage";
 import { useI18n } from "@/lib/i18n";
 import { useAuth, ROLES } from "@/lib/AuthContext";
 import { initials, formatRelative } from "@/lib/format";
@@ -38,6 +39,8 @@ const NAV = {
     { label: "dashboard", path: "/cabinet", icon: LayoutDashboard },
     { section: "section_my_work" },
     { label: "nav_requests", path: "/cabinet/requests", icon: ClipboardList },
+    { label: "nav_processes", path: "/cabinet/processes", icon: Workflow },
+    { label: "nav_my_process_requests", path: "/cabinet/processes/requests", icon: Inbox },
     { label: "nav_goals", path: "/cabinet/goals", icon: Target },
     { label: "nav_kpi", path: "/cabinet/kpi", icon: Zap },
     { label: "nav_development", path: "/cabinet/development", icon: TrendingUp },
@@ -73,8 +76,12 @@ const NAV = {
     { section: "section_learning" },
     { label: "nav_courses", path: "/admin/courses", icon: GraduationCap },
     { label: "nav_library", path: "/admin/library", icon: BookOpen },
+    { section: "section_processes" },
+    { label: "nav_process_setup", path: "/admin/processes", icon: Workflow },
+    { label: "nav_process_requests", path: "/admin/process-requests", icon: Inbox },
     { section: "section_gamification" },
     { label: "nav_achievements", path: "/admin/achievements", icon: Award },
+    { label: "nav_achievement_rules", path: "/admin/achievement-rules", icon: Zap },
     { label: "nav_store", path: "/admin/store", icon: Store },
     { label: "nav_wallet_ops", path: "/admin/wallet", icon: Wallet },
     { label: "nav_wallet_reports", path: "/admin/wallet-reports", icon: BarChart3 },
@@ -558,9 +565,15 @@ export default function PortalShell() {
               to="/cabinet/profile"
               className="flex items-center gap-2 pl-2 ml-1 border-l border-border hover:bg-accent rounded-lg py-1 pr-2 transition"
             >
-              <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold" aria-hidden="true">
-                {initials(displayName)}
-              </span>
+              {/* Фото сотрудника, если оно загружено; иначе — инициалы */}
+              <SafeImage
+                src={employee?.photo_url}
+                alt=""
+                loading="eager"
+                className="w-8 h-8 rounded-full object-cover shrink-0"
+                fallbackText={initials(displayName)}
+                fallbackClassName="bg-primary text-primary-foreground text-xs"
+              />
               <span className="hidden sm:block text-left">
                 {/* BUG-034: роль берётся из сессии, а не из надписи «HR-админ». */}
                 <span className="block text-sm font-medium text-foreground leading-tight">{displayName}</span>

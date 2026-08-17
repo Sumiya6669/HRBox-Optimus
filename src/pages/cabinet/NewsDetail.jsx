@@ -10,6 +10,7 @@ import PageContainer from '@/components/common/PageContainer';
 import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -314,8 +315,9 @@ export default function NewsDetail() {
   return (
     <PageContainer title={news.title} documentTitle={news.title} width="narrow" breadcrumbs={breadcrumbs}>
       <Card className="overflow-hidden">
+        {/* Обложка новости декоративна — заголовок и текст рядом; при битой ссылке заглушка */}
         {news.image_url && (
-          <img src={news.image_url} alt="" className="w-full max-h-80 object-cover" />
+          <SafeImage src={news.image_url} alt="" loading="eager" className="w-full max-h-80 object-cover" />
         )}
         <div className="p-6">
           <div className="flex flex-wrap items-center gap-2 mb-3">

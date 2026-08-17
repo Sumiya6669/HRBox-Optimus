@@ -105,6 +105,12 @@ const dict = {
     completed_course: 'Курс пройден', reserve_book: 'Забронировать',
     required_field: 'Обязательное поле', form_has_errors: 'Проверьте заполнение формы',
     confirm_delete: 'Удалить безвозвратно?',
+    // Процессы и автоправила достижений
+    nav_processes: 'Каталог процессов', nav_my_process_requests: 'Мои заявки по процессам',
+    nav_process_setup: 'Настройка процессов', nav_process_requests: 'Список заявок',
+    nav_achievement_rules: 'Правила достижений',
+    section_processes: 'Процессы',
+
 
     // Уведомления (BUG-043: заголовки страницы не переводились)
     notifications_title: 'Уведомления',
@@ -225,6 +231,12 @@ const dict = {
     completed_course: 'Курс аяқталды', reserve_book: 'Броньдау',
     required_field: 'Міндетті өріс', form_has_errors: 'Форманы тексеріңіз',
     confirm_delete: 'Біржола жою керек пе?',
+    // Процесстер
+    nav_processes: 'Процестер каталогы', nav_my_process_requests: 'Процесс бойынша өтініштерім',
+    nav_process_setup: 'Процестерді баптау', nav_process_requests: 'Өтініштер тізімі',
+    nav_achievement_rules: 'Жетістік ережелері',
+    section_processes: 'Процестер',
+
 
     // Хабарламалар (BUG-043)
     notifications_title: 'Хабарламалар',

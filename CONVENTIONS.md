@@ -147,3 +147,61 @@ const { t, lang, plural, pluralize } = useI18n();
 * Показывать «0 записей», когда пришла ошибка (BUG-011).
 * Использовать фиолетовую и оранжевую палитры: акценты — `brand-wallet`,
   `brand-library`, `brand-learning` из Tailwind-конфига (BUG-054).
+
+---
+
+## 10. Загрузка изображений и файлов
+
+Картинки и вложения задаются **файлом, а не ссылкой**:
+
+```jsx
+import ImageUpload from '@/components/common/ImageUpload';
+import FileUpload from '@/components/common/FileUpload';
+
+<ImageUpload
+  value={form.image_url}
+  path={form.image_path}
+  onChange={({ url, path }) => setForm(f => ({ ...f, image_url: url, image_path: path }))}
+  folder="news"
+  label="Обложка новости"
+  aspect="wide"          // wide | square | avatar
+/>
+```
+
+В БД рядом с каждым `*_url` есть `*_path` — путь объекта в Storage. Сохраняйте оба:
+без `path` нельзя удалить старый файл при замене, и бакет засоряется «сиротами».
+Компонент делает это сам, если вы передали `path`.
+
+Поля с путями: `news.image_path`, `books.cover_path`, `events.photo_path`,
+`employees.photo_path`, `store_items.image_path`, `pages.cover_path`,
+`courses.cover_path`, `achievement_rules.image_path`, `processes.image_path`.
+
+## 11. Процессы
+
+```js
+api.entities.Process / ProcessCategory / ProcessStage / ProcessField / ProcessRoute
+api.entities.ProcessRequest / ProcessRequestValue / ProcessRequestHistory
+api.entities.AchievementRule
+
+api.rpc.submitProcessRequest(processId, categoryId, values)
+api.rpc.decideProcessRequest(requestId, routeId, comment, values)
+api.rpc.cancelProcessRequest(requestId, comment)
+api.rpc.previewAchievementRule(param, operator, threshold)
+api.rpc.applyAchievementRules(ruleId)
+```
+
+Заявки читаются из вьюхи `v_process_requests` (`stage_name`, `stage_type`,
+`is_overdue`, `awaiting_me`, `points_preview`).
+
+**Статус заявки меняется только через RPC.** Прямой `update` на `process_requests`
+закрыт политиками: иначе заявитель перевёл бы свою заявку в «решена» и начислил
+себе баллы. Никогда не пишите в `process_requests.status` из клиента.
+
+Формат `values` для RPC:
+
+```js
+[{ field_id, value_text, value_number, value_json, file_url, file_path }]
+```
+
+Справочники подписей: `PROCESS_FIELD_TYPES`, `PROCESS_STAGE_TYPES`,
+`ACHIEVEMENT_PARAMS`, `COMPARISON_OPERATORS` из `@/lib/statusLabels`.

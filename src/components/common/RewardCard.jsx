@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Gift, ShoppingBag, Loader2 } from 'lucide-react';
+import SafeImage from '@/components/common/SafeImage';
 import { formatPoints, formatMoney, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -57,9 +58,15 @@ export default function RewardCard({
   return (
     <Card className={cn('flex h-full flex-col p-5', className)}>
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl" aria-hidden="true">
-          {item?.icon || <Gift className="h-6 w-6 text-accent-foreground" />}
-        </div>
+        {/* Картинка награды, если её загрузили; иначе — эмодзи (запасной вариант) */}
+        <SafeImage
+          src={item?.image_url}
+          alt=""
+          className="h-12 w-12 shrink-0 rounded-xl object-cover"
+          fallbackIcon={Gift}
+          fallbackText={item?.icon || undefined}
+          fallbackClassName="bg-accent text-2xl text-accent-foreground"
+        />
         {stock > 0 && stock <= 5 && (
           <Badge variant="warning" className="whitespace-nowrap">
             Осталось {formatNumber(stock)}

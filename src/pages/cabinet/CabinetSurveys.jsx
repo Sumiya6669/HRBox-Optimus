@@ -9,6 +9,7 @@ import PageContainer from '@/components/common/PageContainer';
 import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,7 +38,11 @@ function renderRichText(text) {
   const parts = String(text).split(/(!\[.*?\]\(.*?\))/g);
   return parts.map((part, i) => {
     const match = part.match(/!\[(.*?)\]\((.*?)\)/);
-    if (match) return <img key={i} src={match[2]} alt={match[1] || ''} className="max-w-full rounded-lg my-2" />;
+    if (match) {
+      return (
+        <SafeImage key={i} src={match[2]} alt={match[1] || ''} className="max-w-full rounded-lg my-2" />
+      );
+    }
     return <span key={i}>{part}</span>;
   });
 }

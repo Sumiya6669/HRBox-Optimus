@@ -77,6 +77,7 @@ update profiles set role = 'admin' where email = 'admin@optimus-kz.kz';
 supabase functions deploy invite-user
 supabase functions deploy set-user-role
 supabase functions deploy close-expired --no-verify-jwt
+supabase functions deploy apply-achievements --no-verify-jwt
 supabase secrets set PORTAL_URL=https://<домен> CRON_SECRET=<случайная-строка>
 ```
 
@@ -91,6 +92,18 @@ supabase secrets set PORTAL_URL=https://<домен> CRON_SECRET=<случайн
 ```sql
 select cron.schedule('close-expired', '0 3 * * *', $$select close_expired_records()$$);
 ```
+
+`apply-achievements` выдаёт достижения и бонусы по правилам с включённым тумблером
+«Автоматическое награждение» (Администрирование → Геймификация → Правила достижений).
+Её тоже нужно развернуть и повесить на расписание — иначе автоначисление будет
+срабатывать только по кнопке «Проверить и наградить сейчас» в админке:
+
+```sql
+select cron.schedule('apply-achievements', '30 3 * * *', $$select apply_achievement_rules()$$);
+```
+
+Функция идемпотентна: повторный запуск в том же периоде (`once` / `yearly` / `monthly`)
+одному сотруднику достижение не задвоит.
 
 ---
 

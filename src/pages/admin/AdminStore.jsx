@@ -9,6 +9,8 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import ImageUpload from '@/components/common/ImageUpload';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,11 +47,21 @@ const ORDER_FILTERS = [
   { value: 'cancelled', label: 'Отменены' },
 ];
 
+/** Оформление награды: эмодзи остаётся запасным вариантом, если картинки нет. */
+const MEDIA_OPTIONS = [
+  { value: 'emoji', label: 'Эмодзи' },
+  { value: 'image', label: 'Изображение' },
+];
+
 const emptyForm = () => ({
   name: '',
   description: '',
   price: 0,
   icon: '🎁',
+  // Награду можно оформить эмодзи (как раньше) либо картинкой-файлом.
+  media: 'emoji',
+  image_url: '',
+  image_path: '',
   category: '',
   unlimited: true,
   stock: 0,
@@ -162,7 +174,10 @@ export default function AdminStore() {
         name: payload.name.trim(),
         description: payload.description.trim() || null,
         price: Number(payload.price),
+        // Эмодзи сохраняем всегда: это запасной вариант, если картинки нет или она не открылась.
         icon: payload.icon.trim() || null,
+        image_url: payload.media === 'image' ? (payload.image_url || null) : null,
+        image_path: payload.media === 'image' ? (payload.image_path || null) : null,
         category: payload.category.trim() || null,
         // -1 в БД означает «не ограничено» (см. store_items.stock)
         stock: payload.unlimited ? -1 : Number(payload.stock),
@@ -225,6 +240,19 @@ export default function AdminStore() {
     setFormOpen(true);
   };
 
+  /**
+   * Переключение оформления. При возврате к эмодзи картинку убираем и из формы,
+   * и из бакета — иначе останется «сирота», на которую никто не ссылается.
+   */
+  const selectMedia = (media) => {
+    if (media === 'emoji' && form.image_path) {
+      api.storage.remove(form.image_path).catch(() => {});
+    }
+    setForm((f) => (media === 'emoji'
+      ? { ...f, media, image_url: '', image_path: '' }
+      : { ...f, media }));
+  };
+
   const openEdit = (item) => {
     const unlimited = Number(item.stock) < 0;
     setEditing(item);
@@ -233,6 +261,9 @@ export default function AdminStore() {
       description: item.description || '',
       price: item.price ?? 0,
       icon: item.icon || '🎁',
+      media: item.image_url ? 'image' : 'emoji',
+      image_url: item.image_url || '',
+      image_path: item.image_path || '',
       category: item.category || '',
       unlimited,
       stock: unlimited ? 0 : (item.stock ?? 0),
@@ -317,12 +348,15 @@ export default function AdminStore() {
                 <li key={item.id} className="h-full">
                   <Card className="flex h-full flex-col p-5">
                     <div className="flex items-start justify-between gap-2">
-                      <div
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl"
-                        aria-hidden="true"
-                      >
-                        {item.icon || <ShoppingBag className="h-6 w-6 text-accent-foreground" />}
-                      </div>
+                      {/* Картинка, если она загружена; иначе — эмодзи, а при битой ссылке снова эмодзи */}
+                      <SafeImage
+                        src={item.image_url}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                        fallbackIcon={ShoppingBag}
+                        fallbackText={item.icon || undefined}
+                        fallbackClassName="bg-accent text-2xl text-accent-foreground"
+                      />
                       <div className="flex items-center gap-1">
                         <Button
                           size="icon"
@@ -503,7 +537,7 @@ export default function AdminStore() {
                 )}
               </div>
               <div>
-                <Label htmlFor="store-icon">Значок</Label>
+                <Label htmlFor="store-icon">Эмодзи</Label>
                 <Input
                   id="store-icon"
                   value={form.icon}
@@ -513,6 +547,42 @@ export default function AdminStore() {
                 />
               </div>
             </div>
+
+            {/* Оформление награды: эмодзи (как было) или загруженная картинка */}
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-foreground">Оформление</legend>
+              <div className="flex flex-wrap gap-4">
+                {MEDIA_OPTIONS.map((option) => (
+                  <label key={option.value} className="flex min-h-[40px] items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="store-media"
+                      value={option.value}
+                      checked={form.media === option.value}
+                      onChange={() => selectMedia(option.value)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+              {form.media === 'image' ? (
+                <ImageUpload
+                  id="store-image"
+                  value={form.image_url}
+                  path={form.image_path}
+                  folder="store"
+                  label="Изображение награды"
+                  aspect="square"
+                  hint="Если картинки нет, в каталоге показывается эмодзи."
+                  onChange={({ url, path }) => setForm((f) => ({ ...f, image_url: url, image_path: path }))}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  В каталоге будет показан эмодзи из поля выше.
+                </p>
+              )}
+            </fieldset>
 
             <div>
               <Label htmlFor="store-description">Описание</Label>

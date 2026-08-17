@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Award, Plus, Sparkles, Zap, Search, Trash2, CalendarRange, Users, Info,
+  Award, Plus, Sparkles, Zap, Search, Trash2, CalendarRange, Users, Info, Hand,
 } from 'lucide-react';
 import { api } from '@/api/client';
 import PageContainer from '@/components/common/PageContainer';
@@ -9,6 +10,8 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import ImageUpload from '@/components/common/ImageUpload';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,6 +67,9 @@ const emptyForm = () => ({
   reason_code: '',
   auto: false,
   rule: '',
+  // Картинка достижения (миграция 0009: achievements.image_url / image_path).
+  image_url: '',
+  image_path: '',
 });
 
 function validate(form) {
@@ -188,6 +194,8 @@ export default function AdminAchievements() {
         reason_code: payload.reason_code || null,
         auto: payload.auto,
         rule: payload.auto ? payload.rule.trim() : null,
+        image_url: payload.image_url || null,
+        image_path: payload.image_path || null,
       });
 
       // Начисление баллов — отдельная операция кошелька (type='achievement').
@@ -297,10 +305,19 @@ export default function AdminAchievements() {
       description="Награды сотрудников и начисление баллов: «Сотрудник месяца», годовщины, KPI и особые достижения."
       width="wide"
       actions={
-        <Button onClick={openCreate} className="min-h-[40px]">
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          Выдать достижение
-        </Button>
+        <>
+          {/* Автоматическое награждение по условию настраивается отдельной страницей */}
+          <Button variant="outline" className="min-h-[40px]" asChild>
+            <Link to="/admin/achievement-rules">
+              <Zap className="w-4 h-4 mr-1" aria-hidden="true" />
+              Правила автоначисления
+            </Link>
+          </Button>
+          <Button onClick={openCreate} className="min-h-[40px]">
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            Выдать достижение
+          </Button>
+        </>
       }
     >
       {/* --------------------------------------- блок автоматических правил */}
@@ -393,9 +410,15 @@ export default function AdminAchievements() {
               <li key={item.id} className="h-full">
                 <Card className="flex h-full flex-col p-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning text-xl">
-                      {item.icon || <Award className="h-6 w-6" aria-hidden="true" />}
-                    </div>
+                    {/* Картинка достижения (0009); если её нет или ссылка битая — символ либо иконка */}
+                    <SafeImage
+                      src={item.image_url}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-full border border-border object-cover"
+                      fallbackIcon={Award}
+                      fallbackText={item.icon || undefined}
+                      fallbackClassName="bg-warning/15 text-warning text-xl"
+                    />
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-foreground line-clamp-2">{item.title}</h3>
                       <p className="text-xs text-muted-foreground line-clamp-1">
@@ -403,10 +426,16 @@ export default function AdminAchievements() {
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         <StatusBadge value={item.type} fallback={TYPE_LABEL[item.type]} />
-                        {item.auto && (
+                        {/* Источник записи: rule_id проставляет apply_achievement_rules() */}
+                        {item.rule_id ? (
                           <Badge variant="info" className="whitespace-nowrap">
                             <Sparkles className="w-3 h-3 mr-1" aria-hidden="true" />
                             Автоматически
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="whitespace-nowrap">
+                            <Hand className="w-3 h-3 mr-1" aria-hidden="true" />
+                            Вручную
                           </Badge>
                         )}
                       </div>
@@ -644,6 +673,17 @@ export default function AdminAchievements() {
                 placeholder="За что выдано достижение"
               />
             </div>
+
+            {/* Картинка достижения задаётся файлом, а не ссылкой (0009 + раздел 10 соглашений) */}
+            <ImageUpload
+              value={form.image_url}
+              path={form.image_path}
+              folder="achievements"
+              label="Картинка достижения"
+              aspect="square"
+              hint="Показывается в карточке достижения; если не задана — используется иконка"
+              onChange={({ url, path }) => setForm((f) => ({ ...f, image_url: url, image_path: path }))}
+            />
 
             <div className="flex items-center gap-2 min-h-[40px]">
               <Checkbox

@@ -9,6 +9,7 @@ import PageContainer from '@/components/common/PageContainer';
 import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -183,20 +184,15 @@ export default function BookDetail() {
     <PageContainer title={book.title} documentTitle={book.title} width="narrow" breadcrumbs={breadcrumbs}>
       <Card className="p-6">
         <div className="flex flex-col sm:flex-row gap-6">
-          {book.cover_url ? (
-            <img
-              src={book.cover_url}
-              alt=""
-              className="w-32 h-44 rounded-lg object-cover shrink-0 self-center sm:self-start"
-            />
-          ) : (
-            <div
-              className="w-32 h-44 rounded-lg bg-brand-library/15 flex items-center justify-center shrink-0 self-center sm:self-start"
-              aria-hidden="true"
-            >
-              <BookOpen className="w-10 h-10 text-brand-library" />
-            </div>
-          )}
+          {/* Обложка декоративна — название и автор выведены рядом текстом */}
+          <SafeImage
+            src={book.cover_url}
+            alt=""
+            loading="eager"
+            className="w-32 h-44 rounded-lg object-cover shrink-0 self-center sm:self-start"
+            fallbackIcon={BookOpen}
+            fallbackClassName="bg-brand-library/15 text-brand-library"
+          />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 mb-3">

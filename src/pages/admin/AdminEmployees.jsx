@@ -12,6 +12,8 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import ImageUpload from '@/components/common/ImageUpload';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +66,8 @@ const EMPTY_FORM = {
   role_type: 'office',
   status: 'active',
   hire_date: '',
+  photo_url: '',
+  photo_path: '',
 };
 
 /** Экранирование запроса для PostgREST-условия or. */
@@ -215,6 +219,9 @@ export default function AdminEmployees() {
         branch_id: data.branch_id || null,
         hire_date: data.hire_date || null,
         email: data.email.trim() || null,
+        // Фото загружается файлом; путь в Storage нужен для замены и удаления.
+        photo_url: data.photo_url || null,
+        photo_path: data.photo_path || null,
       }),
     onSuccess: (created) => {
       toast({ title: 'Сотрудник добавлен', description: created?.name });
@@ -410,9 +417,14 @@ export default function AdminEmployees() {
                   <tr key={e.id} className="border-b border-border last:border-0 hover:bg-accent/40">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
-                          {initials(e.name)}
-                        </span>
+                        {/* Фото сотрудника; без него и при битой ссылке — инициалы */}
+                        <SafeImage
+                          src={e.photo_url}
+                          alt=""
+                          className="w-9 h-9 rounded-full object-cover shrink-0"
+                          fallbackText={initials(e.name)}
+                          fallbackClassName="bg-primary text-primary-foreground text-xs"
+                        />
                         <span className="min-w-0">
                           <span className="block font-medium text-foreground truncate max-w-[220px]">{e.name}</span>
                           <span className="block text-xs text-muted-foreground truncate max-w-[220px]">
@@ -620,6 +632,19 @@ export default function AdminEmployees() {
                 <option value="probation">Испытательный срок</option>
                 <option value="dismissed">Уволен</option>
               </select>
+            </div>
+            {/* Фото — файлом, а не ссылкой (CONVENTIONS §10) */}
+            <div className="sm:col-span-2">
+              <ImageUpload
+                id="emp-photo"
+                value={form.photo_url}
+                path={form.photo_path}
+                folder="avatars"
+                label="Фото сотрудника"
+                aspect="avatar"
+                hint="Необязательно. Без фото в списках показываются инициалы."
+                onChange={({ url, path }) => setForm((f) => ({ ...f, photo_url: url, photo_path: path }))}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">

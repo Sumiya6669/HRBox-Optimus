@@ -46,6 +46,10 @@ const CabinetFiles = lazy(() => import('@/pages/cabinet/CabinetFiles'));
 const CabinetNotifications = lazy(() => import('@/pages/cabinet/CabinetNotifications'));
 const CabinetProfile = lazy(() => import('@/pages/cabinet/CabinetProfile'));
 const PersonCard = lazy(() => import('@/pages/cabinet/PersonCard'));
+const ProcessCatalog = lazy(() => import('@/pages/cabinet/ProcessCatalog'));
+const ProcessRequestForm = lazy(() => import('@/pages/cabinet/ProcessRequestForm'));
+const ProcessRequests = lazy(() => import('@/pages/cabinet/ProcessRequests'));
+const ProcessRequestDetail = lazy(() => import('@/pages/cabinet/ProcessRequestDetail'));
 
 const AdminHome = lazy(() => import('@/pages/admin/AdminHome'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
@@ -69,6 +73,10 @@ const AdminSurveyReports = lazy(() => import('@/pages/admin/AdminSurveyReports')
 const AdminVacation = lazy(() => import('@/pages/admin/AdminVacation'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 const AdminAudit = lazy(() => import('@/pages/admin/AdminAudit'));
+const AdminProcesses = lazy(() => import('@/pages/admin/AdminProcesses'));
+const AdminProcessBuilder = lazy(() => import('@/pages/admin/AdminProcessBuilder'));
+const AdminProcessRequests = lazy(() => import('@/pages/admin/AdminProcessRequests'));
+const AdminAchievementRules = lazy(() => import('@/pages/admin/AdminAchievementRules'));
 
 function AppRoutes() {
   return (
@@ -112,6 +120,12 @@ function AppRoutes() {
             {/* Карточка коллеги: глобальный поиск раньше вёл на /admin/employees/:id — маршрут за ролью HR */}
             <Route path="/cabinet/people/:id" element={<PersonCard />} />
 
+            {/* Процессы: каталог, подача заявки, мои заявки и очередь согласования */}
+            <Route path="/cabinet/processes" element={<ProcessCatalog />} />
+            <Route path="/cabinet/processes/requests" element={<ProcessRequests />} />
+            <Route path="/cabinet/processes/requests/:id" element={<ProcessRequestDetail />} />
+            <Route path="/cabinet/processes/:processId" element={<ProcessRequestForm />} />
+
             {/* Администрирование: доступно HR и администратору */}
             <Route element={<RequireAuth roles={ROLES.HR} />}>
               <Route path="/admin" element={<AdminHome />} />
@@ -133,6 +147,11 @@ function AppRoutes() {
               <Route path="/admin/survey-auto" element={<AdminAutoSurveys />} />
               <Route path="/admin/survey-reports" element={<AdminSurveyReports />} />
               <Route path="/admin/vacation" element={<AdminVacation />} />
+              {/* Конструктор бизнес-процессов */}
+              <Route path="/admin/processes" element={<AdminProcesses />} />
+              <Route path="/admin/processes/:id" element={<AdminProcessBuilder />} />
+              <Route path="/admin/process-requests" element={<AdminProcessRequests />} />
+              <Route path="/admin/achievement-rules" element={<AdminAchievementRules />} />
             </Route>
 
             {/* Только администратор */}

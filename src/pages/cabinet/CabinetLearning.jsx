@@ -27,6 +27,7 @@ import PageContainer from "@/components/common/PageContainer";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
 import StatusBadge from "@/components/common/StatusBadge";
+import SafeImage from "@/components/common/SafeImage";
 import { formatDate, formatNumber, isPast, pluralize } from "@/lib/format";
 
 /**
@@ -273,9 +274,14 @@ export default function CabinetLearning() {
                       to={`/cabinet/learning/${c.id}`}
                       className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <div className="h-32 bg-brand-learning/10 flex items-center justify-center">
-                        <Icon className="w-12 h-12 text-brand-learning/60" aria-hidden="true" />
-                      </div>
+                      {/* Обложка курса; если её нет или ссылка битая — иконка формата */}
+                      <SafeImage
+                        src={c.cover_url}
+                        alt=""
+                        className="h-32 w-full object-cover"
+                        fallbackIcon={Icon}
+                        fallbackClassName="bg-brand-learning/10 text-brand-learning/60"
+                      />
                     </Link>
                     <div className="p-4 flex-1 flex flex-col">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">

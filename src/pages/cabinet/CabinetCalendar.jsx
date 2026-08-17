@@ -7,6 +7,7 @@ import PageContainer from '@/components/common/PageContainer';
 import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -233,6 +234,15 @@ export default function CabinetCalendar() {
                               {MONTH_TITLES[day?.getMonth()]?.slice(0, 3)}
                             </div>
                           </div>
+
+                          {/* Фото события показываем, только если оно задано (events.photo_url) */}
+                          {event.photo_url && (
+                            <SafeImage
+                              src={event.photo_url}
+                              alt=""
+                              className="hidden h-20 w-32 shrink-0 rounded-lg object-cover sm:block"
+                            />
+                          )}
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2 mb-1">

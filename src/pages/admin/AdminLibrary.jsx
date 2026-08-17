@@ -10,6 +10,8 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import ImageUpload from '@/components/common/ImageUpload';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,6 +54,7 @@ const emptyForm = () => ({
   description: '',
   copies: 1,
   cover_url: '',
+  cover_path: '',
 });
 
 function validate(form) {
@@ -60,9 +63,8 @@ function validate(form) {
   if (!form.author.trim()) errors.author = 'Укажите автора';
   const copies = Number(form.copies);
   if (!Number.isInteger(copies) || copies < 0) errors.copies = 'Количество экземпляров — целое число от 0';
-  if (form.cover_url && !/^https?:\/\//i.test(form.cover_url)) {
-    errors.cover_url = 'Ссылка должна начинаться с http:// или https://';
-  }
+  // Обложка необязательна и загружается файлом (CONVENTIONS §10) — проверять
+  // формат ссылки не нужно.
   return errors;
 }
 
@@ -159,7 +161,8 @@ export default function AdminLibrary() {
         category: payload.category.trim() || null,
         description: payload.description.trim() || null,
         copies: Number(payload.copies),
-        cover_url: payload.cover_url.trim() || null,
+        cover_url: payload.cover_url?.trim() || null,
+        cover_path: payload.cover_path?.trim() || null,
       };
       if (editing) return api.entities.Book.update(editing.id, data);
       return api.entities.Book.create(data);
@@ -261,6 +264,7 @@ export default function AdminLibrary() {
       description: book.description || '',
       copies: book.copies ?? 1,
       cover_url: book.cover_url || '',
+      cover_path: book.cover_path || '',
     });
     setTouched({});
     setFormOpen(true);
@@ -274,7 +278,7 @@ export default function AdminLibrary() {
   };
 
   const submit = () => {
-    setTouched({ title: true, author: true, copies: true, cover_url: true });
+    setTouched({ title: true, author: true, copies: true });
     if (!isValid) return;
     save.mutate(form);
   };
@@ -348,13 +352,14 @@ export default function AdminLibrary() {
               <li key={book.id} className="h-full">
                 <Card className="flex h-full flex-col p-4">
                   <div className="flex gap-3">
-                    <div className="w-12 h-16 shrink-0 overflow-hidden rounded-lg bg-brand-library/15 flex items-center justify-center">
-                      {book.cover_url ? (
-                        <img src={book.cover_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <BookOpen className="w-5 h-5 text-brand-library" aria-hidden="true" />
-                      )}
-                    </div>
+                    {/* Битая обложка не должна показывать «сломанную иконку» браузера. */}
+                    <SafeImage
+                      src={book.cover_url}
+                      alt=""
+                      className="w-12 h-16 shrink-0 overflow-hidden rounded-lg object-cover"
+                      fallbackIcon={BookOpen}
+                      fallbackClassName="bg-brand-library/15 text-brand-library"
+                    />
                     {/* Вёрстка: min-w-0 + line-clamp-2 вместо усечения названия по символам */}
                     <div className="min-w-0 flex-1">
                       <h3 className="font-medium text-foreground line-clamp-2 break-words">{book.title}</h3>
@@ -504,21 +509,17 @@ export default function AdminLibrary() {
                   <p role="alert" className="mt-1 text-xs text-destructive">{showError('copies')}</p>
                 )}
               </div>
-              <div>
-                <Label htmlFor="book-cover">Обложка (ссылка)</Label>
-                <Input
-                  id="book-cover"
-                  value={form.cover_url}
-                  onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
-                  onBlur={() => setTouched((t) => ({ ...t, cover_url: true }))}
-                  placeholder="https://…"
-                  aria-invalid={!!showError('cover_url')}
-                  className="min-h-[40px]"
-                />
-                {showError('cover_url') && (
-                  <p role="alert" className="mt-1 text-xs text-destructive">{showError('cover_url')}</p>
-                )}
-              </div>
+              {/* Обложка загружается файлом, а не ссылкой (CONVENTIONS §10). */}
+              <ImageUpload
+                id="book-cover"
+                value={form.cover_url}
+                path={form.cover_path}
+                folder="books"
+                label="Обложка книги"
+                aspect="square"
+                hint="Необязательно"
+                onChange={({ url, path }) => setForm((f) => ({ ...f, cover_url: url, cover_path: path }))}
+              />
             </div>
 
             <div>

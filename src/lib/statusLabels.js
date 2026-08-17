@@ -110,7 +110,8 @@ export const STATUS = {
   login: { label: 'Вход', variant: 'secondary' },
   logout: { label: 'Выход', variant: 'secondary' },
   invite: { label: 'Приглашение', variant: 'info' },
-  approve: { label: 'Согласование', variant: 'success' },
+  // Ключ `approve` объявлен ниже, в блоке типов этапов процесса: дублировать его
+  // здесь нельзя — второе объявление молча затирало первое (no-dupe-keys).
   reject: { label: 'Отклонение', variant: 'destructive' },
   export: { label: 'Экспорт', variant: 'outline' },
 
@@ -165,6 +166,73 @@ export const STATUS = {
   performance: { label: 'Результативность', variant: 'success' },
   contest: { label: 'Конкурс', variant: 'warning' },
   mentoring: { label: 'Наставничество', variant: 'info' },
+
+  // Конструктор процессов: типы этапов
+  collect: { label: 'Сбор информации', variant: 'info' },
+  approve: { label: 'Согласование', variant: 'warning' },
+  execute: { label: 'Исполнение', variant: 'success' },
+
+  // Статусы заявок по процессам
+  in_progress_request: { label: 'В работе', variant: 'info' },
+
+  // Типы маршрутов
+  next: { label: 'Следующий этап', variant: 'info' },
+  reject_route: { label: 'При отклонении', variant: 'destructive' },
+  resolve: { label: 'Считать решённой', variant: 'success' },
+
+  // Типы полей конструктора
+  select: { label: 'Выбор из вариантов', variant: 'secondary' },
+  multiselect: { label: 'Несколько вариантов', variant: 'secondary' },
+  textarea: { label: 'Многострочный текст', variant: 'secondary' },
+  number: { label: 'Число', variant: 'secondary' },
+  date: { label: 'Дата', variant: 'secondary' },
+  file: { label: 'Файл', variant: 'secondary' },
+
+  // Периодичность автоправил
+  once: { label: 'Один раз', variant: 'secondary' },
+  yearly: { label: 'Раз в год', variant: 'info' },
+  monthly: { label: 'Раз в месяц', variant: 'warning' },
+};
+
+/** Параметры условий автоматического награждения (ТЗ §1.2). */
+export const ACHIEVEMENT_PARAMS = {
+  tenure_months: 'Стаж работы в месяцах',
+  tenure_years: 'Стаж работы в годах',
+  courses_completed: 'Завершённых курсов',
+  books_read: 'Прочитанных книг',
+  points_total: 'Накоплено баллов',
+  surveys_answered: 'Пройдено опросов',
+  goals_completed: 'Достигнуто целей',
+  birthday_today: 'День рождения сегодня',
+};
+
+/** Операторы сравнения в условиях. */
+export const COMPARISON_OPERATORS = {
+  gt: 'Больше',
+  gte: 'Больше или равно',
+  lt: 'Меньше',
+  lte: 'Меньше или равно',
+  eq: 'Равно',
+};
+
+/** Типы полей ввода в конструкторе процессов. */
+export const PROCESS_FIELD_TYPES = {
+  select: 'Выбор из вариантов',
+  multiselect: 'Несколько вариантов',
+  text: 'Текст',
+  textarea: 'Многострочный текст',
+  number: 'Число',
+  date: 'Дата',
+  file: 'Файл',
+  image: 'Изображение',
+  employee: 'Сотрудник',
+};
+
+/** Типы этапов процесса. */
+export const PROCESS_STAGE_TYPES = {
+  collect: 'Сбор информации',
+  approve: 'Согласование',
+  execute: 'Исполнение',
 };
 
 /** BUG-068: человекочитаемые названия сущностей вместо Auth / WalletTransaction / LeaveRequest. */
@@ -213,6 +281,12 @@ export const ENTITY_LABELS = {
   settings: 'Настройки портала',
   AuditLog: 'Журнал аудита',
   audit_logs: 'Журнал аудита',
+  processes: 'Процесс',
+  process_stages: 'Этап процесса',
+  process_fields: 'Поле процесса',
+  process_routes: 'Маршрут процесса',
+  process_requests: 'Заявка по процессу',
+  achievement_rules: 'Правило достижения',
   Favorite: 'Избранное',
   favorites: 'Избранное',
   Event: 'Событие',

@@ -13,6 +13,7 @@ import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
 import OptimusLogo from '@/components/common/OptimusLogo';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -367,7 +368,7 @@ export default function CompanyHome() {
                   <Card className="overflow-hidden">
                     {pinned.image_url && (
                       <Link to={`/cabinet/news/${pinned.id}`} className="block">
-                        <img src={pinned.image_url} alt="" className="w-full h-48 object-cover" />
+                        <SafeImage src={pinned.image_url} alt="" className="w-full h-48 object-cover" />
                       </Link>
                     )}
                     <div className="p-5">
@@ -539,9 +540,14 @@ export default function CompanyHome() {
                 <ul role="list" className="space-y-2">
                   {peopleRows.map((e) => (
                     <li key={e.id} role="listitem" className="flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-full bg-accent text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                        {initials(e.name)}
-                      </span>
+                      {/* Фото сотрудника, иначе — инициалы */}
+                      <SafeImage
+                        src={e.photo_url}
+                        alt=""
+                        className="w-8 h-8 rounded-full object-cover shrink-0"
+                        fallbackText={initials(e.name)}
+                        fallbackClassName="bg-accent text-primary text-xs"
+                      />
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm font-medium text-foreground truncate">{e.name}</span>
                         <span className="block text-xs text-muted-foreground truncate">

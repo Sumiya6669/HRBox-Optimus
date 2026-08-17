@@ -10,6 +10,7 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import ImageUpload from '@/components/common/ImageUpload';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +76,8 @@ const emptyForm = () => ({
   body: '',
   status: 'draft',
   show_in_menu: false,
+  cover_url: '',
+  cover_path: '',
 });
 
 function validate(form) {
@@ -159,6 +162,9 @@ export default function AdminPages() {
         body: payload.body,
         status: payload.status,
         show_in_menu: payload.show_in_menu,
+        // Обложка задаётся файлом; путь нужен для замены и удаления объекта в Storage.
+        cover_url: payload.cover_url || null,
+        cover_path: payload.cover_path || null,
         // Дату публикации проставляем в момент публикации, а не «на будущее».
         published_date:
           payload.status === 'published'
@@ -223,6 +229,8 @@ export default function AdminPages() {
       body: item.body || '',
       status: item.status || 'draft',
       show_in_menu: !!item.show_in_menu,
+      cover_url: item.cover_url || '',
+      cover_path: item.cover_path || '',
     });
     setSlugTouchedByUser(true); // у существующей страницы слаг не перезаписываем автоматически
     setTouched({});
@@ -533,6 +541,18 @@ export default function AdminPages() {
                 <Label htmlFor="page-menu" className="font-normal">Показывать в меню портала</Label>
               </div>
             </div>
+
+            {/* Обложка страницы — файлом, а не ссылкой (CONVENTIONS §10) */}
+            <ImageUpload
+              id="page-cover"
+              value={form.cover_url}
+              path={form.cover_path}
+              folder="pages"
+              label="Обложка страницы"
+              aspect="wide"
+              hint="Необязательно. Показывается в шапке страницы."
+              onChange={({ url, path }) => setForm((f) => ({ ...f, cover_url: url, cover_path: path }))}
+            />
           </div>
 
           <DialogFooter className="gap-2">

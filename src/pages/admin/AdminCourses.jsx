@@ -10,6 +10,7 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import ImageUpload from '@/components/common/ImageUpload';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,8 @@ const emptyForm = () => ({
   is_mandatory: false,
   deadline: '',
   status: 'draft',
+  cover_url: '',
+  cover_path: '',
 });
 
 function validate(form) {
@@ -194,6 +197,8 @@ export default function AdminCourses() {
         is_mandatory: payload.is_mandatory,
         deadline: payload.deadline || null,
         status: payload.status,
+        cover_url: payload.cover_url || null,
+        cover_path: payload.cover_path || null,
       };
       if (editing) return api.entities.Course.update(editing.id, data);
       return api.entities.Course.create(data);
@@ -289,6 +294,8 @@ export default function AdminCourses() {
       is_mandatory: !!course.is_mandatory,
       deadline: course.deadline ? formatDate(course.deadline, 'iso') : '',
       status: course.status || 'draft',
+      cover_url: course.cover_url || '',
+      cover_path: course.cover_path || '',
     });
     setTouched({});
     setFormOpen(true);
@@ -650,6 +657,18 @@ export default function AdminCourses() {
                 </div>
               </div>
             </div>
+
+            {/* Обложка курса — файлом, а не ссылкой (CONVENTIONS §10). */}
+            <ImageUpload
+              id="course-cover"
+              value={form.cover_url}
+              path={form.cover_path}
+              folder="courses"
+              label="Обложка курса"
+              aspect="wide"
+              hint="Необязательно. Показывается в каталоге обучения."
+              onChange={({ url, path }) => setForm((f) => ({ ...f, cover_url: url, cover_path: path }))}
+            />
           </div>
 
           <DialogFooter className="gap-2">

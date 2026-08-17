@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/AuthContext';
 import PageContainer from '@/components/common/PageContainer';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
+import SafeImage from '@/components/common/SafeImage';
 import PageNotFound from '@/lib/PageNotFound';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,13 +96,15 @@ export default function PersonCard() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-start gap-4 mb-4">
-            {data.photo_url ? (
-              <img src={data.photo_url} alt="" className="w-16 h-16 rounded-full object-cover shrink-0" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold shrink-0" aria-hidden="true">
-                {initials(data.name)}
-              </div>
-            )}
+            {/* Фото сотрудника; без него и при битой ссылке — инициалы */}
+            <SafeImage
+              src={data.photo_url}
+              alt=""
+              loading="eager"
+              className="w-16 h-16 rounded-full object-cover shrink-0"
+              fallbackText={initials(data.name)}
+              fallbackClassName="bg-primary text-primary-foreground text-lg"
+            />
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-foreground">{data.name}</h2>
               {data.position && <p className="text-sm text-muted-foreground">{data.position}</p>}

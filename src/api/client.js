@@ -37,6 +37,15 @@ const entities = {
   Notification: createEntity('notifications', { defaultSort: '-date' }),
   OnboardingTask: createEntity('onboarding_tasks'),
   Page: createEntity('pages', { defaultSort: '-updated_date' }),
+  Process: createEntity('processes', { defaultSort: 'sort_order' }),
+  ProcessCategory: createEntity('process_categories', { defaultSort: 'sort_order' }),
+  ProcessStage: createEntity('process_stages', { defaultSort: 'sort_order' }),
+  ProcessField: createEntity('process_fields', { defaultSort: 'sort_order' }),
+  ProcessRoute: createEntity('process_routes', { defaultSort: 'sort_order' }),
+  ProcessRequest: createEntity('process_requests', { defaultSort: '-created_date' }),
+  ProcessRequestValue: createEntity('process_request_values'),
+  ProcessRequestHistory: createEntity('process_request_history', { defaultSort: 'created_date' }),
+  AchievementRule: createEntity('achievement_rules', { defaultSort: '-created_date' }),
   RequestComment: createEntity('request_comments', { defaultSort: 'created_date' }),
   ServiceRequest: createEntity('service_requests', { defaultSort: '-created_date' }),
   // BUG-085: первичный ключ настроек — key, а не id.
@@ -204,6 +213,25 @@ const storage = {
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return { file_url: pub.publicUrl, path };
   },
+  /**
+   * Загрузка изображения с проверкой типа и размера.
+   * Возвращает { file_url, path } — путь нужен, чтобы при замене картинки
+   * удалить старый объект и не засорять бакет «сиротами».
+   */
+  async uploadImage({ file, folder = 'images', maxBytes = 5 * 1024 * 1024 }) {
+    if (!file) throw new DataError('Файл не выбран', { status: 400 });
+    if (!file.type?.startsWith('image/')) {
+      throw new DataError('Можно загрузить только изображение (PNG, JPEG, WebP, SVG)', { status: 400 });
+    }
+    if (file.size > maxBytes) {
+      throw new DataError(
+        `Файл слишком большой: ${(file.size / 1024 / 1024).toFixed(1)} МБ при лимите ${Math.round(maxBytes / 1024 / 1024)} МБ`,
+        { status: 400 }
+      );
+    }
+    return storage.upload({ file, folder });
+  },
+
   async remove(path) {
     const { error } = await supabase.storage.from(BUCKET).remove([path]);
     if (error) throw new DataError(error.message, { status: error.status });
@@ -253,6 +281,57 @@ const rpc = {
     if (error) throw new DataError(error.message, { status: error.status, code: error.code });
     return data;
   },
+  /** Подача заявки по процессу: значения полей первого этапа. */
+  async submitProcessRequest(processId, categoryId, values) {
+    const { data, error } = await supabase.rpc('process_submit_request', {
+      p_process_id: processId,
+      p_category_id: categoryId ?? null,
+      p_values: values ?? [],
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data;
+  },
+
+  /** Проведение заявки по маршруту: согласование, отклонение, исполнение. */
+  async decideProcessRequest(requestId, routeId, comment, values) {
+    const { data, error } = await supabase.rpc('process_decide', {
+      p_request_id: requestId,
+      p_route_id: routeId,
+      p_comment: comment ?? null,
+      p_values: values ?? [],
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data;
+  },
+
+  /** Отзыв собственной заявки. */
+  async cancelProcessRequest(requestId, comment) {
+    const { error } = await supabase.rpc('process_cancel_request', {
+      p_request_id: requestId,
+      p_comment: comment ?? null,
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return true;
+  },
+
+  /** Кто попадёт под правило достижения, если запустить его сейчас. */
+  async previewAchievementRule(param, operator, threshold) {
+    const { data, error } = await supabase.rpc('preview_achievement_rule', {
+      p_param: param,
+      p_operator: operator,
+      p_threshold: threshold,
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || [];
+  },
+
+  /** Запуск автоправил достижений (кнопка «Проверить сейчас» в админке). */
+  async applyAchievementRules(ruleId = null) {
+    const { data, error } = await supabase.rpc('apply_achievement_rules', { p_rule_id: ruleId });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
+  },
+
   /** Баланс кошелька сотрудника, посчитанный на сервере. */
   async walletBalance(employeeId) {
     const { data, error } = await supabase.rpc('wallet_balance', { p_employee_id: employeeId });

@@ -1,16 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Briefcase, Building2, CalendarDays, Camera, Mail, MapPin, Phone, Save, Shield } from 'lucide-react';
+import { Briefcase, Building2, CalendarDays, Mail, MapPin, Phone, Save, Shield } from 'lucide-react';
 
 import { api } from '@/api/client';
 import PageContainer from '@/components/common/PageContainer';
 import ErrorState from '@/components/common/ErrorState';
+import ImageUpload from '@/components/common/ImageUpload';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n';
@@ -66,7 +67,6 @@ export default function CabinetProfile() {
   const { toast } = useToast();
   const { user, employee, employeeId, roleLabel, isLoadingAuth, authError, refresh } = useAuth();
   const { lang, setLang } = useI18n();
-  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({ full_name: '', phone: '' });
   const [touched, setTouched] = useState({});
@@ -121,17 +121,22 @@ export default function CabinetProfile() {
     onError: (e) => toast({ variant: 'destructive', title: 'Не удалось сохранить профиль', description: e?.message }),
   });
 
-  const uploadPhoto = useMutation({
-    mutationFn: async (file) => {
-      const { file_url } = await api.storage.upload({ file, folder: 'avatars' });
-      await api.entities.Employee.update(employeeId, { photo_url: file_url });
-      return file_url;
-    },
-    onSuccess: async () => {
-      toast({ title: 'Фото обновлено' });
+  /**
+   * Фото профиля сохраняется сразу после загрузки файла: ImageUpload уже положил
+   * его в Storage и вернул путь — записываем в карточку и url, и path, иначе при
+   * следующей замене старый файл останется в бакете «сиротой».
+   */
+  const savePhoto = useMutation({
+    mutationFn: ({ url, path }) =>
+      api.entities.Employee.update(employeeId, {
+        photo_url: url || null,
+        photo_path: path || null,
+      }),
+    onSuccess: async (_data, { url }) => {
+      toast({ title: url ? 'Фото обновлено' : 'Фото удалено' });
       await refresh();
     },
-    onError: (e) => toast({ variant: 'destructive', title: 'Не удалось загрузить фото', description: e?.message }),
+    onError: (e) => toast({ variant: 'destructive', title: 'Не удалось сохранить фото', description: e?.message }),
   });
 
   const changeLocale = useMutation({
@@ -153,17 +158,6 @@ export default function CabinetProfile() {
     },
     onError: (e) => toast({ variant: 'destructive', title: 'Не удалось изменить пароль', description: e?.message }),
   });
-
-  const handlePhoto = (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast({ variant: 'destructive', title: 'Нужен файл изображения', description: 'Подойдут JPG или PNG.' });
-      return;
-    }
-    uploadPhoto.mutate(file);
-  };
 
   if (authError) {
     return (
@@ -194,35 +188,30 @@ export default function CabinetProfile() {
       {/* Шапка профиля: только реальные данные, пустых бейджей «—» больше нет (BUG-034). */}
       <Card className="p-6">
         <div className="flex flex-col sm:flex-row items-start gap-4">
-          <div className="relative">
-            <Avatar className="w-20 h-20">
-              {photoUrl && <AvatarImage src={photoUrl} alt={`Фото: ${displayName}`} />}
-              <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-                {initials(displayName)}
-              </AvatarFallback>
-            </Avatar>
-            {employeeId && (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={handlePhoto}
-                />
-                <Button
-                  size="icon"
-                  variant="outline"
-                  aria-label="Загрузить фото профиля"
-                  disabled={uploadPhoto.isPending}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full"
-                >
-                  <Camera className="w-4 h-4" aria-hidden="true" />
-                </Button>
-              </>
-            )}
-          </div>
+          {/* Фото — файлом (CONVENTIONS §10). Без карточки сотрудника менять его некуда. */}
+          {employeeId ? (
+            <ImageUpload
+              id="profile-photo"
+              value={photoUrl}
+              path={employee?.photo_path}
+              folder="avatars"
+              label="Фото профиля"
+              aspect="avatar"
+              hint="JPG, PNG или WebP. Без фото показываются инициалы."
+              disabled={savePhoto.isPending}
+              className="w-full shrink-0 sm:w-64"
+              onChange={({ url, path }) => savePhoto.mutate({ url, path })}
+            />
+          ) : (
+            <SafeImage
+              src={photoUrl}
+              alt=""
+              loading="eager"
+              className="w-20 h-20 rounded-full object-cover shrink-0"
+              fallbackText={initials(displayName)}
+              fallbackClassName="bg-primary text-primary-foreground text-2xl"
+            />
+          )}
 
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold text-foreground">{displayName}</h2>

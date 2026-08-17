@@ -11,6 +11,7 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import SafeImage from '@/components/common/SafeImage';
 import { useToast } from '@/components/ui/use-toast';
 import { useCurrentEmployee } from '@/lib/useCurrentEmployee';
 import { formatNumber, pluralize } from '@/lib/format';
@@ -184,17 +185,14 @@ export default function CabinetLibrary() {
                         className="group flex flex-1 flex-col focus-visible:outline-none"
                         aria-label={`Открыть карточку книги «${book.title}»`}
                       >
-                        <div className="flex h-40 items-center justify-center bg-accent">
-                          {book.cover_url ? (
-                            <img
-                              src={book.cover_url}
-                              alt=""
-                              className="h-full w-full object-cover transition group-hover:scale-[1.02]"
-                            />
-                          ) : (
-                            <BookOpen className="h-10 w-10 text-brand-library" aria-hidden="true" />
-                          )}
-                        </div>
+                        {/* Обложка декоративна: название книги идёт текстом ниже */}
+                        <SafeImage
+                          src={book.cover_url}
+                          alt=""
+                          className="h-40 w-full object-cover transition group-hover:scale-[1.02]"
+                          fallbackIcon={BookOpen}
+                          fallbackClassName="bg-accent text-brand-library"
+                        />
 
                         <div className="flex flex-1 flex-col gap-2 p-3">
                           <h3 className="line-clamp-2 min-w-0 text-sm font-semibold text-foreground group-hover:text-brand-library">

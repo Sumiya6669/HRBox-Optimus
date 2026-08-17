@@ -12,6 +12,8 @@ import PageContainer from '@/components/common/PageContainer';
 import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
+import ImageUpload from '@/components/common/ImageUpload';
+import SafeImage from '@/components/common/SafeImage';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +21,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -243,6 +244,8 @@ export default function AdminEmployeeDetail() {
       hire_date: employee.hire_date || '',
       birth_date: employee.birth_date || '',
       manager_id: employee.manager_id || '',
+      photo_url: employee.photo_url || '',
+      photo_path: employee.photo_path || '',
     });
   }, [employee]);
 
@@ -275,6 +278,9 @@ export default function AdminEmployeeDetail() {
         birth_date: data.birth_date || null,
         manager_id: data.manager_id || null,
         manager_name: managerName.get(data.manager_id) || null,
+        // Фото задаётся файлом; путь нужен, чтобы при замене удалить старый объект.
+        photo_url: data.photo_url || null,
+        photo_path: data.photo_path || null,
       }),
     onSuccess: () => {
       toast({ title: 'Карточка обновлена' });
@@ -390,11 +396,15 @@ export default function AdminEmployeeDetail() {
         {/* Шапка карточки */}
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row items-start gap-5">
-            <Avatar className="w-20 h-20">
-              <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-                {initials(employee.name)}
-              </AvatarFallback>
-            </Avatar>
+            {/* Фото сотрудника; если его нет или ссылка битая — инициалы */}
+            <SafeImage
+              src={employee.photo_url}
+              alt=""
+              loading="eager"
+              className="w-20 h-20 rounded-full object-cover shrink-0"
+              fallbackText={initials(employee.name)}
+              fallbackClassName="bg-primary text-primary-foreground text-2xl"
+            />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap mb-1">
                 <h1 className="text-2xl font-bold text-foreground">{employee.name}</h1>
@@ -854,6 +864,19 @@ export default function AdminEmployeeDetail() {
                       <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                 </select>
+              </div>
+              {/* Фото — файлом, а не ссылкой (CONVENTIONS §10) */}
+              <div className="sm:col-span-2">
+                <ImageUpload
+                  id="edit-photo"
+                  value={form.photo_url}
+                  path={form.photo_path}
+                  folder="avatars"
+                  label="Фото сотрудника"
+                  aspect="avatar"
+                  hint="Необязательно. Без фото показываются инициалы."
+                  onChange={({ url, path }) => setForm((f) => ({ ...f, photo_url: url, photo_path: path }))}
+                />
               </div>
             </div>
           )}

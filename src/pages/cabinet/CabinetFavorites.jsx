@@ -12,6 +12,7 @@ import EmptyState from '@/components/common/EmptyState';
 import ErrorState from '@/components/common/ErrorState';
 import StatusBadge from '@/components/common/StatusBadge';
 import FilterChips from '@/components/common/FilterChips';
+import SafeImage from '@/components/common/SafeImage';
 import { useToast } from '@/components/ui/use-toast';
 import { useCurrentEmployee } from '@/lib/useCurrentEmployee';
 import { formatDate } from '@/lib/format';
@@ -199,7 +200,7 @@ export default function CabinetFavorites() {
                   <li key={f.id} role="listitem" className="h-full">
                     <Card className={cn('flex h-full items-start gap-3 p-4', !record && 'border-dashed')}>
                       {f.item_image && record ? (
-                        <img src={f.item_image} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+                        <SafeImage src={f.item_image} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
                       ) : (
                         <div
                           className={cn(

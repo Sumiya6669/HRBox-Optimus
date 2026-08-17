@@ -15,6 +15,7 @@ import PageContainer from "@/components/common/PageContainer";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
 import StatusBadge from "@/components/common/StatusBadge";
+import SafeImage from "@/components/common/SafeImage";
 import { statusLabel } from "@/lib/statusLabels";
 import { formatDate, formatNumber, pluralize } from "@/lib/format";
 
@@ -310,7 +311,7 @@ export default function CabinetNews() {
                         className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {n.image_url && (
-                          <img src={n.image_url} alt="" className="w-full h-56 object-cover" />
+                          <SafeImage src={n.image_url} alt="" className="w-full h-56 object-cover" />
                         )}
                       </Link>
                       <div className="p-5">
@@ -358,7 +359,7 @@ export default function CabinetNews() {
                           to={`/cabinet/news/${n.id}`}
                           className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                         >
-                          <img src={n.image_url} alt="" className="w-24 h-24 rounded-lg object-cover" />
+                          <SafeImage src={n.image_url} alt="" className="w-24 h-24 rounded-lg object-cover" />
                         </Link>
                       )}
                       <div className="flex-1 min-w-0">
