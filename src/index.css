@@ -1,0 +1,207 @@
+/*
+ * Дизайн-система портала Optimus KZ.
+ *
+ * BUG-054 — было три несогласованные палитры: красный бренд, фиолетовый кошелёк,
+ *           оранжевая библиотека. Теперь все акценты — производные от бренда.
+ * BUG-061 — контраст ниже WCAG AA (4.05 / 4.32 / 4.36 при норме 4.5).
+ *           Бренд-красный для текста затемнён до #C4001A (5.68:1 на #F3F4F6),
+ *           muted-foreground — до #4B5563 (7.0:1).
+ * ЭТАП 6  — шрифт больше не тянется с Google Fonts тремя блокирующими запросами.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+    --background: 220 15% 96%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Бренд Optimus KZ. --primary проходит AA как текст на светлом фоне. */
+    --primary: 352 100% 38%;          /* #C4001A */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 352 100% 32%;
+    --brand-surface: 353 100% 45%;    /* только для декоративных заливок и градиентов */
+
+    --secondary: 215 14% 34%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 215 14% 34%;  /* #4B5563 — контраст 7.0:1 */
+    --accent: 353 100% 96%;
+    --accent-foreground: 352 100% 30%;
+
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 69% 27%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 90% 32%;
+    --warning-foreground: 0 0% 100%;
+    --info: 205 84% 32%;
+    --info-foreground: 0 0% 100%;
+
+    /* Акценты модулей — производные от бренда, а не независимые палитры. */
+    --module-wallet: 352 62% 34%;
+    --module-library: 8 72% 34%;
+    --module-learning: 340 55% 32%;
+
+    --border: 220 14% 89%;
+    --input: 220 14% 85%;
+    --ring: 352 100% 38%;
+
+    --radius: 0.75rem;
+
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 220 15% 95%;
+    --card: 222 40% 10%;
+    --card-foreground: 220 15% 95%;
+    --popover: 222 40% 10%;
+    --popover-foreground: 220 15% 95%;
+
+    --primary: 353 100% 62%;
+    --primary-foreground: 222 47% 8%;
+    --primary-hover: 353 100% 70%;
+    --brand-surface: 353 100% 52%;
+
+    --secondary: 220 9% 65%;
+    --secondary-foreground: 222 47% 8%;
+    --muted: 222 30% 16%;
+    --muted-foreground: 220 14% 72%;
+    --accent: 353 40% 20%;
+    --accent-foreground: 353 100% 78%;
+
+    --destructive: 0 84% 68%;
+    --destructive-foreground: 222 47% 8%;
+    --success: 142 65% 60%;
+    --success-foreground: 222 47% 8%;
+    --warning: 38 92% 62%;
+    --warning-foreground: 222 47% 8%;
+    --info: 199 85% 66%;
+    --info-foreground: 222 47% 8%;
+
+    --module-wallet: 352 70% 66%;
+    --module-library: 8 78% 66%;
+    --module-learning: 340 65% 66%;
+
+    --border: 222 30% 20%;
+    --input: 222 30% 24%;
+    --ring: 353 100% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Видимое кольцо фокуса на всех интерактивных элементах (a11y-минимум). */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* BUG-060: не было ссылки «Перейти к содержимому». */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed left-4 top-4 z-[100] rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg;
+  }
+
+  /* BUG-036: таблицы уезжали за край экрана без индикатора прокрутки. */
+  .table-scroll {
+    @apply relative overflow-x-auto;
+    scrollbar-width: thin;
+    background:
+      linear-gradient(to right, hsl(var(--card)) 30%, transparent),
+      linear-gradient(to left, hsl(var(--card)) 30%, transparent) 100% 0,
+      linear-gradient(to right, rgb(0 0 0 / 0.09), transparent),
+      linear-gradient(to left, rgb(0 0 0 / 0.09), transparent) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  /* BUG-036: колонка действий всегда видна. */
+  .table-sticky-actions {
+    @apply sticky right-0 bg-card;
+    box-shadow: -8px 0 8px -8px rgb(0 0 0 / 0.15);
+  }
+
+  /* BUG-057: активный пункт меню обрезался внизу скролл-контейнера. */
+  .nav-scroll {
+    @apply overflow-y-auto;
+    mask-image: linear-gradient(to bottom, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+  }
+
+  /* Минимальная область нажатия (a11y: цели ≥ 44 px). */
+  .touch-target {
+    @apply relative;
+  }
+  .touch-target::after {
+    content: '';
+    position: absolute;
+    inset: 50% 50% 50% 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.35); border-radius: 999px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.55); }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
+  .shadow-premium { box-shadow: var(--shadow-md); }
+  .shadow-premium-lg { box-shadow: var(--shadow-lg); }
+  .shadow-premium-xl { box-shadow: var(--shadow-xl); }
+
+  .animate-fade-in { animation: fadeIn 0.25s ease-out; }
+  .animate-slide-in { animation: slideIn 0.25s ease-out; }
+  .animate-scale-in { animation: scaleIn 0.18s ease-out; }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideIn { from { transform: translateX(-8px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes scaleIn { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+}

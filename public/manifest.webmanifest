@@ -1,0 +1,14 @@
+{
+  "name": "Портал Optimus KZ",
+  "short_name": "Optimus KZ",
+  "description": "Корпоративный портал ТОО «Optimus KZ»",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F3F4F6",
+  "theme_color": "#C4001A",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
