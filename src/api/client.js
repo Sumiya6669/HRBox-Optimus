@@ -180,10 +180,30 @@ function translateAuthError(message = '') {
 /* ----------------------------------------------------------------- users */
 
 const users = {
-  /** Приглашение пользователя — только для роли admin, выполняется Edge-функцией на сервере. */
+  /**
+   * Приглашение письмом. Требует настроенного SMTP в Supabase: встроенный
+   * почтовик ограничен несколькими письмами в час. Если письмо уйти не может,
+   * возвращаем понятный совет воспользоваться ссылкой-приглашением.
+   */
   async inviteUser(email, role = 'employee') {
-    const { data, error } = await supabase.functions.invoke('invite-user', { body: { email, role } });
-    if (error) throw new DataError(error.message || 'Не удалось отправить приглашение', { status: error.status });
+    const { data, error } = await supabase.functions.invoke('invite-user', {
+      body: { email, role, redirect_to: window.location.origin },
+    });
+    if (error) {
+      // Тело ответа Edge-функции лежит в error.context — без него виден лишь
+      // невнятный «Failed to send a request to the Edge Function».
+      let message = 'Не удалось отправить приглашение';
+      try {
+        const body = await error.context?.json();
+        if (body?.error) message = body.error;
+      } catch {
+        message =
+          'Функция отправки писем недоступна. Воспользуйтесь кнопкой «Создать ссылку» — ' +
+          'её можно передать любым способом.';
+      }
+      throw new DataError(message, { status: error.status });
+    }
+    if (data?.error) throw new DataError(data.error, { status: 400 });
     return data;
   },
   /**
