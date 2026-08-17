@@ -177,6 +177,31 @@ function translateAuthError(message = '') {
   return message || 'Ошибка аутентификации';
 }
 
+
+/**
+ * Разбор ошибки Edge-функции.
+ *
+ * supabase-js прячет ответ функции в error.context (это Response), а сам отдаёт
+ * невнятное «Failed to send a request to the Edge Function». Читаем тело:
+ * сначала как JSON, потом как текст — иначе настоящая причина отказа теряется
+ * и пользователь видит бессмысленную общую фразу.
+ */
+async function edgeFunctionError(error, fallback) {
+  const status = error?.context?.status ?? error?.status ?? null;
+  try {
+    const body = await error.context?.clone()?.json();
+    if (body?.error) return new DataError(body.error, { status });
+  } catch { /* тело не JSON — пробуем текстом */ }
+  try {
+    const text = await error.context?.clone()?.text();
+    if (text && text.length < 400) return new DataError(text, { status });
+  } catch { /* тело недоступно */ }
+  if (status === 404) {
+    return new DataError('Серверная функция не развёрнута в проекте Supabase', { status });
+  }
+  return new DataError(fallback, { status });
+}
+
 /* ----------------------------------------------------------------- users */
 
 const users = {
@@ -190,18 +215,11 @@ const users = {
       body: { email, role, redirect_to: window.location.origin },
     });
     if (error) {
-      // Тело ответа Edge-функции лежит в error.context — без него виден лишь
-      // невнятный «Failed to send a request to the Edge Function».
-      let message = 'Не удалось отправить приглашение';
-      try {
-        const body = await error.context?.json();
-        if (body?.error) message = body.error;
-      } catch {
-        message =
-          'Функция отправки писем недоступна. Воспользуйтесь кнопкой «Создать ссылку» — ' +
-          'её можно передать любым способом.';
-      }
-      throw new DataError(message, { status: error.status });
+      throw await edgeFunctionError(
+        error,
+        'Функция отправки писем недоступна. Воспользуйтесь кнопкой «Создать ссылку» — ' +
+          'её можно передать любым способом.'
+      );
     }
     if (data?.error) throw new DataError(data.error, { status: 400 });
     return data;
@@ -240,11 +258,7 @@ const users = {
     const { data, error } = await supabase.functions.invoke('accept-invite', {
       body: { token, password, email, full_name: fullName },
     });
-    if (error) {
-      let message = 'Не удалось завершить регистрацию';
-      try { message = (await error.context?.json())?.error || message; } catch { /* тело недоступно */ }
-      throw new DataError(message, { status: error.status });
-    }
+    if (error) throw await edgeFunctionError(error, 'Не удалось завершить регистрацию');
     if (data?.error) throw new DataError(data.error, { status: 400 });
     return data;
   },

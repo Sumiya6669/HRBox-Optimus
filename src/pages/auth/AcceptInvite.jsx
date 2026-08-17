@@ -22,12 +22,36 @@ import { formatDate } from '@/lib/format';
  * Роль приходит из самого приглашения на сервере — из формы её задать нельзя,
  * иначе по ссылке можно было бы зарегистрироваться администратором.
  */
+/**
+ * Обёртка объявлена НА УРОВНЕ МОДУЛЯ. Когда она была вложена в компонент,
+ * при каждом рендере создавался новый тип компонента — React размонтировал
+ * и заново монтировал всю форму, поэтому поле теряло фокус после каждой
+ * набранной буквы.
+ */
+function Shell({ children }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex justify-center"><OptimusLogo size={32} /></div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const REASONS = {
+  not_found: 'Ссылка-приглашение не найдена. Проверьте, что скопировали её целиком.',
+  used: 'По этой ссылке уже зарегистрировались. Если это были вы — просто войдите.',
+  expired: 'Срок действия ссылки истёк. Попросите HR выпустить новую.',
+  revoked: 'Приглашение отозвано. Обратитесь к HR.',
+};
+
 export default function AcceptInvite() {
   const { token } = useParams();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState(null); // null — пользователь ещё не правил поле
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [error, setError] = useState(null);
@@ -42,22 +66,6 @@ export default function AcceptInvite() {
   });
 
   if (isLoading) return <BrandLoader />;
-
-  const REASONS = {
-    not_found: 'Ссылка-приглашение не найдена. Проверьте, что скопировали её целиком.',
-    used: 'По этой ссылке уже зарегистрировались. Если это были вы — просто войдите.',
-    expired: 'Срок действия ссылки истёк. Попросите HR выпустить новую.',
-    revoked: 'Приглашение отозвано. Обратитесь к HR.',
-  };
-
-  const Shell = ({ children }) => (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex justify-center"><OptimusLogo size={32} /></div>
-        {children}
-      </div>
-    </div>
-  );
 
   if (!invite?.valid) {
     return (
@@ -114,7 +122,7 @@ export default function AcceptInvite() {
         token,
         password,
         email: targetEmail,
-        fullName: fullName || invite.full_name,
+        fullName: fullName ?? invite.full_name,
       });
       setDone(true);
     } catch (err) {
@@ -154,7 +162,7 @@ export default function AcceptInvite() {
           <Input
             id="invite-name"
             autoComplete="name"
-            value={fullName || invite.full_name || ''}
+            value={fullName ?? invite.full_name ?? ''}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Иванов Пётр"
           />
