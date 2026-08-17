@@ -4,17 +4,30 @@
 // запрещает пользователю трогать собственное поле role. Здесь операция
 // выполняется service_role-ключом после проверки, что вызывающий — администратор.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+/**
+ * CORS отражает заголовки, которые браузер спрашивает в preflight.
+ *
+ * Жёсткий список был ошибкой: supabase-js добавлял к запросам свой заголовок
+ * x-application-name, его в списке не было, и браузер резал запрос ещё до
+ * отправки — функция даже не вызывалась.
+ */
+function corsHeaders(req: Request) {
+  const requested = req.headers.get('access-control-request-headers');
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers':
+      requested || 'authorization, x-client-info, apikey, content-type, x-application-name',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+}
 
 const ALLOWED_ROLES = ['employee', 'manager', 'hr', 'admin'];
 
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   const json = (body: unknown, status = 200) =>

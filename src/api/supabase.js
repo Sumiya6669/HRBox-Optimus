@@ -18,9 +18,11 @@ export const supabase = createClient(url || 'http://localhost:54321', anonKey ||
     detectSessionInUrl: true,
     storageKey: 'optimus-kz-auth',
   },
-  global: {
-    headers: { 'x-application-name': 'optimus-kz-portal' },
-  },
+  // Своих заголовков здесь быть не должно: supabase-js добавляет их ко ВСЕМ
+  // запросам, включая вызовы Edge Functions. Нестандартный заголовок обязан быть
+  // перечислен в Access-Control-Allow-Headers функции, иначе браузер режет
+  // запрос на preflight — так вызов accept-invite падал с ошибкой CORS,
+  // не доходя до сервера.
 });
 
 export default supabase;
