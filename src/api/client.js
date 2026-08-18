@@ -232,6 +232,57 @@ const users = {
     position, phone, departmentId, branchId, hireDate,
     employeeId, createEmployee = true,
   } = {}) {
+    /*
+     * Основной путь — функция в базе. Раньше учётку заводила только Edge-функция
+     * create-user, и пока её не развернули, кнопка отвечала «Проверьте, что
+     * функция create-user развёрнута в Supabase». Требовать отдельный деплой
+     * ради заведения пользователя — лишний барьер: SQL-миграции администратор
+     * применяет и так.
+     *
+     * Edge-функция осталась запасным путём: если в проекте ещё нет миграции
+     * 0016, вызов RPC не найдёт функцию, и мы пробуем её.
+     */
+    const { data, error } = await supabase.rpc('admin_create_user', {
+      p_email: email?.trim().toLowerCase(),
+      p_password: password,
+      p_full_name: fullName?.trim(),
+      p_role: role,
+      p_position: position?.trim() || null,
+      p_phone: phone?.trim() || null,
+      p_department_id: departmentId || null,
+      p_branch_id: branchId || null,
+      p_hire_date: hireDate || null,
+      p_employee_id: employeeId || null,
+    });
+
+    if (!error) return data;
+
+    // 42883 / PGRST202 — функции нет в схеме. Всё остальное (нет прав, дубль
+    // почты, слабый пароль) — осмысленный отказ, и подменять его попыткой
+    // достучаться до Edge-функции нельзя: человек увидит не ту причину.
+    const missing = error.code === '42883'
+      || error.code === 'PGRST202'
+      || /admin_create_user/.test(error.message || '');
+
+    if (!missing) {
+      throw new DataError(error.message || 'Не удалось создать пользователя', {
+        status: error.status,
+        code: error.code,
+      });
+    }
+
+    return users.createUserViaFunction({
+      email, password, fullName, role,
+      position, phone, departmentId, branchId, hireDate, employeeId, createEmployee,
+    });
+  },
+
+  /** Запасной путь через Edge-функцию — если миграция 0016 ещё не применена. */
+  async createUserViaFunction({
+    email, password, fullName, role = 'employee',
+    position, phone, departmentId, branchId, hireDate,
+    employeeId, createEmployee = true,
+  } = {}) {
     const { data, error } = await supabase.functions.invoke('create-user', {
       body: {
         email: email?.trim().toLowerCase(),
@@ -250,7 +301,8 @@ const users = {
     if (error) {
       throw await edgeFunctionError(
         error,
-        'Не удалось создать пользователя. Проверьте, что функция create-user развёрнута в Supabase.'
+        'Не удалось создать пользователя: в базе нет функции admin_create_user, ' +
+        'а Edge-функция create-user не развёрнута. Примените миграцию 0016 в SQL-редакторе Supabase.'
       );
     }
     if (data?.error) throw new DataError(data.error, { status: 400 });
