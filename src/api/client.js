@@ -434,6 +434,65 @@ const rpc = {
     if (error) throw new DataError(error.message, { status: error.status, code: error.code });
     return data ?? 0;
   },
+
+  /**
+   * Сводная аналитика программы баллов за период.
+   *
+   * Считает СУБД по всей истории. Раньше отчёт собирался в браузере из выборки
+   * последних 5000 операций: на маленькой базе цифры совпадали с правдой, а
+   * дальше начали бы тихо расходиться — без единой ошибки на экране. Это и была
+   * причина претензии «часть показателей невозможно получить достоверно».
+   */
+  async walletAnalytics({ from = null, to = null } = {}) {
+    const { data, error } = await supabase.rpc('wallet_analytics', {
+      p_from: from || null,
+      p_to: to || null,
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
+  },
+
+  /** Полная история операций со всеми связями — страница выгрузки. */
+  async walletLedger({ from = null, to = null, limit = 1000, offset = 0 } = {}) {
+    const { data, error } = await supabase.rpc('wallet_ledger', {
+      p_from: from || null,
+      p_to: to || null,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || [];
+  },
+
+  /** Сколько всего операций попадёт в выгрузку — чтобы показать прогресс. */
+  async walletLedgerCount({ from = null, to = null } = {}) {
+    const { data, error } = await supabase.rpc('wallet_ledger_count', {
+      p_from: from || null,
+      p_to: to || null,
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return Number(data ?? 0);
+  },
+
+  /**
+   * Выгружает ВСЮ историю операций за период, страница за страницей.
+   *
+   * Одним запросом это делать нельзя: на большой истории он упрётся в таймаут
+   * PostgREST, и пользователь получит не отчёт, а ошибку. Поэтому идём порциями
+   * и сообщаем прогресс наружу.
+   */
+  async walletLedgerAll({ from = null, to = null, onProgress } = {}) {
+    const total = await rpc.walletLedgerCount({ from, to });
+    const pageSize = 1000;
+    const rows = [];
+    for (let offset = 0; offset < total; offset += pageSize) {
+      const page = await rpc.walletLedger({ from, to, limit: pageSize, offset });
+      rows.push(...page);
+      onProgress?.(rows.length, total);
+      if (page.length < pageSize) break;
+    }
+    return rows;
+  },
 };
 
 export const api = { entities, auth, users, storage, integrations, rpc, supabase };
