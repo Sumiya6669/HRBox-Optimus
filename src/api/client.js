@@ -367,10 +367,46 @@ const users = {
     return data;
   },
 
+  /**
+   * Смена роли. Основной путь — функция в базе, как и у создания пользователя.
+   *
+   * Раньше это делала только Edge-функция set-user-role. Пока её не развернули,
+   * кнопка отвечала «Failed to send a request to the Edge Function» — сообщением
+   * от библиотеки, из которого не следует, что именно нужно сделать.
+   */
   async setRole(userId, role) {
-    const { data, error } = await supabase.functions.invoke('set-user-role', { body: { userId, role } });
-    if (error) throw new DataError(error.message || 'Не удалось изменить роль', { status: error.status });
-    return data;
+    const { data, error } = await supabase.rpc('admin_set_role', {
+      p_user_id: userId,
+      p_role: role,
+    });
+
+    if (!error) return data;
+
+    // Переключаемся на Edge-функцию ТОЛЬКО если функции нет в базе. Отказ по
+    // существу (нет прав, последний администратор) — осмысленная причина, и
+    // подменять её попыткой достучаться до функции нельзя: человек увидит не то.
+    const missing = error.code === '42883'
+      || error.code === 'PGRST202'
+      || /admin_set_role/.test(error.message || '');
+
+    if (!missing) {
+      throw new DataError(error.message || 'Не удалось изменить роль', {
+        status: error.status,
+        code: error.code,
+      });
+    }
+
+    const { data: fnData, error: fnError } =
+      await supabase.functions.invoke('set-user-role', { body: { userId, role } });
+    if (fnError) {
+      throw await edgeFunctionError(
+        fnError,
+        'Не удалось изменить роль: в базе нет функции admin_set_role, а Edge-функция ' +
+        'set-user-role не развёрнута. Примените миграцию 0018 в SQL-редакторе Supabase.'
+      );
+    }
+    if (fnData?.error) throw new DataError(fnData.error, { status: 400 });
+    return fnData;
   },
   list: (sort, limit) => entities.User.list(sort, limit),
 };
