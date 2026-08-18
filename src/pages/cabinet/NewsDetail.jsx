@@ -134,7 +134,7 @@ export default function NewsDetail() {
   useEffect(() => {
     if (!id || !news || viewRegistered.current === id) return;
     viewRegistered.current = id;
-    api.supabase.rpc('register_news_view', { p_news_id: id }).catch(() => {});
+    api.rpc.registerNewsView(id);
   }, [id, news]);
 
   /* ---------------------------------------------------------------- мутации */

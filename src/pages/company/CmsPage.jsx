@@ -243,7 +243,7 @@ export default function CmsPage() {
   useEffect(() => {
     if (!slug || !page || viewRegistered.current === slug) return;
     viewRegistered.current = slug;
-    api.supabase.rpc('register_page_view', { p_slug: slug }).catch(() => {});
+    api.rpc.registerPageView(slug);
   }, [slug, page]);
 
   if (error) {

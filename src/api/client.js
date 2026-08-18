@@ -410,6 +410,24 @@ const rpc = {
     return data || {};
   },
 
+  /**
+   * Счётчики просмотров — «выстрелил и забыл»: сбой не должен ломать страницу.
+   *
+   * Важно: supabase.rpc() возвращает построитель запроса. Он thenable, но метода
+   * .catch() у него нет — вызов вида rpc(...).catch(...) падает с
+   * «rpc(...).catch is not a function» и роняет весь рендер. Поэтому оборачиваем
+   * в Promise.resolve.
+   */
+  registerNewsView(newsId) {
+    if (!newsId) return Promise.resolve();
+    return Promise.resolve(supabase.rpc('register_news_view', { p_news_id: newsId })).catch(() => {});
+  },
+
+  registerPageView(slug) {
+    if (!slug) return Promise.resolve();
+    return Promise.resolve(supabase.rpc('register_page_view', { p_slug: slug })).catch(() => {});
+  },
+
   /** Баланс кошелька сотрудника, посчитанный на сервере. */
   async walletBalance(employeeId) {
     const { data, error } = await supabase.rpc('wallet_balance', { p_employee_id: employeeId });
