@@ -18,6 +18,15 @@ const entities = {
   Branch: createEntity('branches'),
   Candidate: createEntity('candidates'),
   Course: createEntity('courses'),
+  CourseLesson: createEntity('course_lessons', { defaultSort: 'position' }),
+  CourseTest: createEntity('course_tests'),
+  TestQuestion: createEntity('test_questions', { defaultSort: 'position' }),
+  // Варианты ответа сотрудник НЕ читает: в них флаг is_correct. RLS отдаёт их
+  // только HR — для конструктора теста. Сотруднику вопросы приходят через
+  // start_test_attempt(), которая этот флаг вырезает.
+  TestOption: createEntity('test_options', { defaultSort: 'position' }),
+  TestAttempt: createEntity('test_attempts', { defaultSort: '-started_at' }),
+  LessonProgress: createEntity('lesson_progress', { defaultSort: '-updated_date' }),
   Comment: createEntity('comments', { defaultSort: '-created_date' }),
   Department: createEntity('departments'),
   DevelopmentPlan: createEntity('development_plans', { defaultSort: '-created_date' }),
@@ -318,21 +327,51 @@ const users = {
 
 const BUCKET = 'portal-files';
 
+/**
+ * Бакет для учебного видео.
+ *
+ * Отдельный от общего: у portal-files лимит 25 МБ и нет видеоформатов в списке
+ * разрешённых типов — видеоурок туда просто не загрузится.
+ */
+const MEDIA_BUCKET = 'course-media';
+
 const storage = {
-  async upload({ file, folder = 'uploads' }) {
+  async upload({ file, folder = 'uploads', bucket = BUCKET }) {
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData?.session?.user?.id;
     if (!uid) throw new DataError('Требуется вход в систему', { status: 401 });
     const safeName = file.name.replace(/[^\w.-]+/g, '_');
     const path = `${folder}/${uid}/${Date.now()}-${safeName}`;
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    const { error } = await supabase.storage.from(bucket).upload(path, file, {
       cacheControl: '3600',
       upsert: false,
       contentType: file.type || 'application/octet-stream',
     });
     if (error) throw new DataError(error.message || 'Не удалось загрузить файл', { status: error.status });
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return { file_url: pub.publicUrl, path };
+    const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+    return { file_url: pub.publicUrl, path, bucket };
+  },
+
+  /**
+   * Загрузка видеоурока файлом.
+   *
+   * Лимит держим на 500 МБ — столько разрешает бакет. Проверяем размер ДО
+   * отправки: иначе человек ждёт десять минут, чтобы в конце получить отказ
+   * от сервера, и не понимает, что именно пошло не так.
+   */
+  async uploadVideo({ file, folder = 'lessons', maxBytes = 500 * 1024 * 1024 }) {
+    if (!file) throw new DataError('Файл не выбран', { status: 400 });
+    const ok = /^video\//.test(file.type || '') || file.type === 'application/pdf';
+    if (!ok) {
+      throw new DataError('Можно загрузить видео (MP4, WebM, MOV) или PDF', { status: 400 });
+    }
+    if (file.size > maxBytes) {
+      throw new DataError(
+        `Файл слишком большой: ${(file.size / 1024 / 1024).toFixed(0)} МБ при лимите ${Math.round(maxBytes / 1024 / 1024)} МБ`,
+        { status: 400 }
+      );
+    }
+    return storage.upload({ file, folder, bucket: MEDIA_BUCKET });
   },
   /**
    * Загрузка изображения с проверкой типа и размера.
@@ -353,10 +392,14 @@ const storage = {
     return storage.upload({ file, folder });
   },
 
-  async remove(path) {
-    const { error } = await supabase.storage.from(BUCKET).remove([path]);
+  async remove(path, bucket = BUCKET) {
+    const { error } = await supabase.storage.from(bucket).remove([path]);
     if (error) throw new DataError(error.message, { status: error.status });
     return true;
+  },
+
+  removeMedia(path) {
+    return storage.remove(path, MEDIA_BUCKET);
   },
 };
 
@@ -493,6 +536,47 @@ const rpc = {
       p_role: role,
       p_sections: sections,
     });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
+  },
+
+  /**
+   * Отметить урок пройденным. employee_id сервер берёт из сессии, а не из
+   * запроса: иначе урок можно было бы «закрыть» за коллегу.
+   */
+  async completeLesson(lessonId, { completed = true, positionSeconds = 0 } = {}) {
+    const { data, error } = await supabase.rpc('complete_lesson', {
+      p_lesson_id: lessonId,
+      p_completed: completed,
+      p_position_seconds: Math.round(positionSeconds || 0),
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
+  },
+
+  /**
+   * Начать попытку теста. Возвращает вопросы БЕЗ признака правильности —
+   * ключ к тесту в браузер не попадает вообще.
+   */
+  async startTestAttempt(courseId) {
+    const { data, error } = await supabase.rpc('start_test_attempt', { p_course_id: courseId });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
+  },
+
+  /** Завершить попытку. Проверку ответов делает сервер. */
+  async submitTestAttempt(attemptId, answers) {
+    const { data, error } = await supabase.rpc('submit_test_attempt', {
+      p_attempt_id: attemptId,
+      p_answers: answers,
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
+  },
+
+  /** Метрики обучения для HR: прохождение курсов и результаты тестов. */
+  async courseStats(courseId = null) {
+    const { data, error } = await supabase.rpc('course_stats', { p_course_id: courseId });
     if (error) throw new DataError(error.message, { status: error.status, code: error.code });
     return data || {};
   },

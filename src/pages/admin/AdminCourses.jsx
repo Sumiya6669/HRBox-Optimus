@@ -1,7 +1,8 @@
+import { Link } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  GraduationCap, Plus, Clock, Award, Users, Pencil, Trash2, UserPlus, BarChart3,
+  GraduationCap, Plus, Clock, Award, Users, Pencil, Trash2, UserPlus, BarChart3, ListChecks,
   Search, CalendarClock, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/api/client';
@@ -108,6 +109,17 @@ function CardsSkeleton() {
         </Card>
       ))}
     </div>
+  );
+}
+
+/** Компактная плитка метрики обучения. */
+function LearningMetric({ label, value, hint, valueClass }) {
+  return (
+    <Card className="p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={cn('text-xl font-bold text-foreground', valueClass)}>{value}</div>
+      {hint && <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>}
+    </Card>
   );
 }
 
@@ -354,6 +366,12 @@ export default function AdminCourses() {
 
   const hasFilters = !!search || status !== 'all';
 
+  const learningStatsQuery = useQuery({
+    queryKey: ['course-stats-all'],
+    queryFn: () => api.rpc.courseStats(),
+  });
+  const learningTotals = learningStatsQuery.data?.totals || {};
+
   return (
     <PageContainer
       title="Курсы"
@@ -366,6 +384,22 @@ export default function AdminCourses() {
         </Button>
       }
     >
+      {/*
+        Метрики обучения по ВСЕМ курсам. Считает база (course_stats), а не
+        страница: подсчёт на клиенте шёл бы по текущей выборке карточек и
+        занижал бы цифры, как только курсов стало бы больше страницы.
+      */}
+      <div className="grid grid-cols-2 gap-3 mb-4 xl:grid-cols-5">
+        <LearningMetric label="Назначено" value={formatNumber(learningTotals.enrolled || 0)}
+          hint={`${formatNumber(learningTotals.not_started || 0)} не приступали`} />
+        <LearningMetric label="В процессе" value={formatNumber(learningTotals.in_progress || 0)} />
+        <LearningMetric label="Завершили" value={formatNumber(learningTotals.completed || 0)}
+          valueClass="text-success" hint={`${learningTotals.completion_rate || 0}% от назначенных`} />
+        <LearningMetric label="Средний прогресс" value={`${formatNumber(learningTotals.avg_progress || 0)}%`} />
+        <LearningMetric label="Сдача тестов" value={`${learningTotals.pass_rate || 0}%`}
+          hint={`средний балл ${learningTotals.avg_score || 0}%`} />
+      </div>
+
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
         <div className="relative w-full lg:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -490,6 +524,21 @@ export default function AdminCourses() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap items-center gap-1">
+                    {/*
+                      Наполнение курса — отдельный экран: уроки, файлы и тест не
+                      помещаются в диалог редактирования карточки, а главное —
+                      именно там курс становится курсом, а не описанием.
+                    */}
+                    <Button
+                      size="sm"
+                      className="min-h-[40px]"
+                      asChild
+                    >
+                      <Link to={`/admin/courses/${course.id}`} aria-label={`Наполнить курс «${course.title}»`}>
+                        <ListChecks className="w-4 h-4" aria-hidden="true" />
+                        Уроки и тест
+                      </Link>
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"

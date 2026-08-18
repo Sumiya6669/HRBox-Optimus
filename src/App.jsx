@@ -79,6 +79,8 @@ const AdminProcessBuilder = lazy(() => import('@/pages/admin/AdminProcessBuilder
 const AdminProcessRequests = lazy(() => import('@/pages/admin/AdminProcessRequests'));
 const AdminAchievementRules = lazy(() => import('@/pages/admin/AdminAchievementRules'));
 const AdminPermissions = lazy(() => import('@/pages/admin/AdminPermissions'));
+const AdminCourseBuilder = lazy(() => import('@/pages/admin/AdminCourseBuilder'));
+const TestRunner = lazy(() => import('@/pages/cabinet/TestRunner'));
 
 /**
  * Маршрут с проверкой раздела.
@@ -102,6 +104,12 @@ function AppRoutes() {
 
         {/* Портал — только для аутентифицированных (BUG-001) */}
         <Route element={<RequireAuth />}>
+          {/*
+            Тест идёт БЕЗ оболочки портала: во время проверки знаний боковое меню
+            только отвлекает, а уход по случайной ссылке стоил бы человеку попытки.
+          */}
+          <Route path="/cabinet/learning/:id/test" element={gate('cabinet.learning', <TestRunner />)} />
+
           <Route element={<PortalShell />}>
             <Route path="/" element={<CompanyHome />} />
             <Route path="/search" element={<SearchResults />} />
@@ -150,6 +158,8 @@ function AppRoutes() {
               <Route path="/admin/pages" element={gate('admin.pages', <AdminPages />)} />
               <Route path="/admin/files" element={gate('admin.files', <AdminFiles />)} />
               <Route path="/admin/courses" element={gate('admin.courses', <AdminCourses />)} />
+              {/* Конструктор курса: уроки, видео и итоговый тест */}
+              <Route path="/admin/courses/:id" element={gate('admin.courses', <AdminCourseBuilder />)} />
               <Route path="/admin/library" element={gate('admin.library', <AdminLibrary />)} />
               <Route path="/admin/achievements" element={gate('admin.achievements', <AdminAchievements />)} />
               <Route path="/admin/store" element={gate('admin.store', <AdminStore />)} />
