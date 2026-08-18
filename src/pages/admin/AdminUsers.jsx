@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
+import AddUserDialog from '@/components/admin/AddUserDialog';
 import { useAuth, ROLE_LABELS } from '@/lib/AuthContext';
 import { formatDate, formatNumber, initials, pluralize } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -78,6 +79,7 @@ export default function AdminUsers() {
   const [role, setRole] = useState('all');
   const [page, setPage] = useState(1);
 
+  const [addOpen, setAddOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('employee');
@@ -274,9 +276,9 @@ export default function AdminUsers() {
       description="Учётные записи портала, роли и связь с карточками сотрудников."
       width="wide"
       actions={
-        <Button onClick={() => setInviteOpen(true)}>
+        <Button onClick={() => setAddOpen(true)}>
           <UserPlus className="w-4 h-4" aria-hidden="true" />
-          Пригласить пользователя
+          Добавить пользователя
         </Button>
       }
     >
@@ -339,10 +341,10 @@ export default function AdminUsers() {
                   description={
                     search || role !== 'all'
                       ? 'Измените запрос или снимите фильтр по роли.'
-                      : 'Пригласите первого пользователя — он получит письмо со ссылкой для входа.'
+                      : 'Добавьте первого пользователя — сразу с паролем, ссылкой или письмом.'
                   }
-                  actionLabel={search || role !== 'all' ? 'Сбросить фильтры' : 'Пригласить пользователя'}
-                  onAction={() => (search || role !== 'all' ? resetFilters() : setInviteOpen(true))}
+                  actionLabel={search || role !== 'all' ? 'Сбросить фильтры' : 'Добавить пользователя'}
+                  onAction={() => (search || role !== 'all' ? resetFilters() : setAddOpen(true))}
                 />
               </div>
             ) : (
@@ -580,8 +582,8 @@ export default function AdminUsers() {
                   icon={MailCheck}
                   title="Неотвеченных приглашений нет"
                   description="Все приглашённые пользователи уже входили в портал хотя бы один раз."
-                  actionLabel="Пригласить пользователя"
-                  onAction={() => setInviteOpen(true)}
+                  actionLabel="Добавить пользователя"
+                  onAction={() => setAddOpen(true)}
                 />
               </div>
             ) : (
@@ -639,7 +641,18 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* Диалог приглашения (BUG-025: валидация до отправки, BUG-072: явная «Отмена») */}
+      {/*
+        Добавление пользователя тремя способами: сразу с паролем, ссылкой, письмом.
+        Одного способа не хватало — письмо требует SMTP, ссылка требует, чтобы человек
+        её открыл. Прямое создание закрывает случай «завести учётку здесь и сейчас».
+      */}
+      <AddUserDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreated={() => { invalidate(); invalidateInvites(); }}
+      />
+
+      {/* Повторная отправка письма существующему пользователю (BUG-025, BUG-072) */}
       <Dialog
         open={inviteOpen}
         onOpenChange={(open) => {

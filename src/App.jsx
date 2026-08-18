@@ -78,6 +78,17 @@ const AdminProcesses = lazy(() => import('@/pages/admin/AdminProcesses'));
 const AdminProcessBuilder = lazy(() => import('@/pages/admin/AdminProcessBuilder'));
 const AdminProcessRequests = lazy(() => import('@/pages/admin/AdminProcessRequests'));
 const AdminAchievementRules = lazy(() => import('@/pages/admin/AdminAchievementRules'));
+const AdminPermissions = lazy(() => import('@/pages/admin/AdminPermissions'));
+
+/**
+ * Маршрут с проверкой раздела.
+ *
+ * Проверять доступ только в меню недостаточно: скрытый пункт не закрывает
+ * страницу — адрес можно набрать руками. Поэтому каждый экран портала обёрнут
+ * гейтом с ключом раздела из src/lib/sections.js, и меню с роутером опираются
+ * на один и тот же источник правды.
+ */
+const gate = (section, element) => <RequireAuth section={section}>{element}</RequireAuth>;
 
 function AppRoutes() {
   return (
@@ -96,74 +107,76 @@ function AppRoutes() {
             <Route path="/search" element={<SearchResults />} />
 
             {/* Личный кабинет */}
-            <Route path="/cabinet" element={<CabinetDashboard />} />
-            <Route path="/cabinet/news" element={<CabinetNews />} />
-            <Route path="/cabinet/news/:id" element={<NewsDetail />} />
-            <Route path="/cabinet/learning" element={<CabinetLearning />} />
-            <Route path="/cabinet/learning/:id" element={<CourseDetail />} />
-            <Route path="/cabinet/development" element={<CabinetDevelopment />} />
-            <Route path="/cabinet/requests" element={<CabinetRequests />} />
-            <Route path="/cabinet/requests/:id" element={<RequestDetail />} />
-            <Route path="/cabinet/surveys" element={<CabinetSurveys />} />
-            <Route path="/cabinet/feedback" element={<CabinetFeedback />} />
-            <Route path="/cabinet/goals" element={<CabinetGoals />} />
-            <Route path="/cabinet/kpi" element={<CabinetKPI />} />
-            <Route path="/cabinet/vacation" element={<CabinetVacation />} />
-            <Route path="/cabinet/calendar" element={<CabinetCalendar />} />
-            <Route path="/cabinet/documents" element={<CabinetDocuments />} />
-            <Route path="/cabinet/wallet" element={<CabinetWallet />} />
-            <Route path="/cabinet/library" element={<CabinetLibrary />} />
-            <Route path="/cabinet/library/:id" element={<BookDetail />} />
+            <Route path="/cabinet" element={gate('cabinet.dashboard', <CabinetDashboard />)} />
+            <Route path="/cabinet/news" element={gate('cabinet.news', <CabinetNews />)} />
+            <Route path="/cabinet/news/:id" element={gate('cabinet.news', <NewsDetail />)} />
+            <Route path="/cabinet/learning" element={gate('cabinet.learning', <CabinetLearning />)} />
+            <Route path="/cabinet/learning/:id" element={gate('cabinet.learning', <CourseDetail />)} />
+            <Route path="/cabinet/development" element={gate('cabinet.development', <CabinetDevelopment />)} />
+            <Route path="/cabinet/requests" element={gate('cabinet.requests', <CabinetRequests />)} />
+            <Route path="/cabinet/requests/:id" element={gate('cabinet.requests', <RequestDetail />)} />
+            <Route path="/cabinet/surveys" element={gate('cabinet.surveys', <CabinetSurveys />)} />
+            <Route path="/cabinet/feedback" element={gate('cabinet.feedback', <CabinetFeedback />)} />
+            <Route path="/cabinet/goals" element={gate('cabinet.goals', <CabinetGoals />)} />
+            <Route path="/cabinet/kpi" element={gate('cabinet.kpi', <CabinetKPI />)} />
+            <Route path="/cabinet/vacation" element={gate('cabinet.vacation', <CabinetVacation />)} />
+            <Route path="/cabinet/calendar" element={gate('cabinet.calendar', <CabinetCalendar />)} />
+            <Route path="/cabinet/documents" element={gate('cabinet.documents', <CabinetDocuments />)} />
+            <Route path="/cabinet/wallet" element={gate('cabinet.wallet', <CabinetWallet />)} />
+            <Route path="/cabinet/library" element={gate('cabinet.library', <CabinetLibrary />)} />
+            <Route path="/cabinet/library/:id" element={gate('cabinet.library', <BookDetail />)} />
             {/* BUG-071: магазин наград — один модуль, вкладка кошелька ведёт сюда же */}
-            <Route path="/cabinet/store" element={<CabinetStore />} />
-            <Route path="/cabinet/favorites" element={<CabinetFavorites />} />
-            <Route path="/cabinet/files" element={<CabinetFiles />} />
-            <Route path="/cabinet/notifications" element={<CabinetNotifications />} />
-            <Route path="/cabinet/profile" element={<CabinetProfile />} />
+            <Route path="/cabinet/store" element={gate('cabinet.store', <CabinetStore />)} />
+            <Route path="/cabinet/favorites" element={gate('cabinet.favorites', <CabinetFavorites />)} />
+            <Route path="/cabinet/files" element={gate('cabinet.files', <CabinetFiles />)} />
+            <Route path="/cabinet/notifications" element={gate('cabinet.notifications', <CabinetNotifications />)} />
+            <Route path="/cabinet/profile" element={gate('cabinet.profile', <CabinetProfile />)} />
             {/* Карточка коллеги: глобальный поиск раньше вёл на /admin/employees/:id — маршрут за ролью HR */}
             <Route path="/cabinet/people/:id" element={<PersonCard />} />
 
             {/* Процессы: каталог, подача заявки, мои заявки и очередь согласования */}
-            <Route path="/cabinet/processes" element={<ProcessCatalog />} />
-            <Route path="/cabinet/processes/requests" element={<ProcessRequests />} />
-            <Route path="/cabinet/processes/requests/:id" element={<ProcessRequestDetail />} />
-            <Route path="/cabinet/processes/:processId" element={<ProcessRequestForm />} />
+            <Route path="/cabinet/processes" element={gate('cabinet.processes', <ProcessCatalog />)} />
+            <Route path="/cabinet/processes/requests" element={gate('cabinet.processes', <ProcessRequests />)} />
+            <Route path="/cabinet/processes/requests/:id" element={gate('cabinet.processes', <ProcessRequestDetail />)} />
+            <Route path="/cabinet/processes/:processId" element={gate('cabinet.processes', <ProcessRequestForm />)} />
 
             {/* Администрирование: доступно HR и администратору */}
             <Route element={<RequireAuth roles={ROLES.HR} />}>
-              <Route path="/admin" element={<AdminHome />} />
-              <Route path="/admin/employees" element={<AdminEmployees />} />
-              <Route path="/admin/employees/:id" element={<AdminEmployeeDetail />} />
-              <Route path="/admin/departments" element={<AdminDepartments />} />
-              <Route path="/admin/news" element={<AdminNews />} />
-              <Route path="/admin/pages" element={<AdminPages />} />
-              <Route path="/admin/files" element={<AdminFiles />} />
-              <Route path="/admin/courses" element={<AdminCourses />} />
-              <Route path="/admin/library" element={<AdminLibrary />} />
-              <Route path="/admin/achievements" element={<AdminAchievements />} />
-              <Route path="/admin/store" element={<AdminStore />} />
-              <Route path="/admin/wallet" element={<AdminWallet />} />
-              <Route path="/admin/wallet-reports" element={<AdminWalletReports />} />
-              <Route path="/admin/award-reasons" element={<AdminAwardReasons />} />
-              <Route path="/admin/surveys" element={<AdminSurveys />} />
-              <Route path="/admin/survey-sessions" element={<AdminSurveySessions />} />
-              <Route path="/admin/survey-auto" element={<AdminAutoSurveys />} />
-              <Route path="/admin/survey-reports" element={<AdminSurveyReports />} />
-              <Route path="/admin/vacation" element={<AdminVacation />} />
+              <Route path="/admin" element={gate('admin.overview', <AdminHome />)} />
+              <Route path="/admin/employees" element={gate('admin.employees', <AdminEmployees />)} />
+              <Route path="/admin/employees/:id" element={gate('admin.employees', <AdminEmployeeDetail />)} />
+              <Route path="/admin/departments" element={gate('admin.departments', <AdminDepartments />)} />
+              <Route path="/admin/news" element={gate('admin.news', <AdminNews />)} />
+              <Route path="/admin/pages" element={gate('admin.pages', <AdminPages />)} />
+              <Route path="/admin/files" element={gate('admin.files', <AdminFiles />)} />
+              <Route path="/admin/courses" element={gate('admin.courses', <AdminCourses />)} />
+              <Route path="/admin/library" element={gate('admin.library', <AdminLibrary />)} />
+              <Route path="/admin/achievements" element={gate('admin.achievements', <AdminAchievements />)} />
+              <Route path="/admin/store" element={gate('admin.store', <AdminStore />)} />
+              <Route path="/admin/wallet" element={gate('admin.wallet', <AdminWallet />)} />
+              <Route path="/admin/wallet-reports" element={gate('admin.wallet_reports', <AdminWalletReports />)} />
+              <Route path="/admin/award-reasons" element={gate('admin.award_reasons', <AdminAwardReasons />)} />
+              <Route path="/admin/surveys" element={gate('admin.surveys', <AdminSurveys />)} />
+              <Route path="/admin/survey-sessions" element={gate('admin.survey_sessions', <AdminSurveySessions />)} />
+              <Route path="/admin/survey-auto" element={gate('admin.survey_auto', <AdminAutoSurveys />)} />
+              <Route path="/admin/survey-reports" element={gate('admin.survey_reports', <AdminSurveyReports />)} />
+              <Route path="/admin/vacation" element={gate('admin.vacation', <AdminVacation />)} />
               {/* Конструктор бизнес-процессов */}
-              <Route path="/admin/processes" element={<AdminProcesses />} />
-              <Route path="/admin/processes/:id" element={<AdminProcessBuilder />} />
-              <Route path="/admin/process-requests" element={<AdminProcessRequests />} />
-              <Route path="/admin/achievement-rules" element={<AdminAchievementRules />} />
+              <Route path="/admin/processes" element={gate('admin.processes', <AdminProcesses />)} />
+              <Route path="/admin/processes/:id" element={gate('admin.processes', <AdminProcessBuilder />)} />
+              <Route path="/admin/process-requests" element={gate('admin.process_requests', <AdminProcessRequests />)} />
+              <Route path="/admin/achievement-rules" element={gate('admin.achievement_rules', <AdminAchievementRules />)} />
             </Route>
 
             {/* Только администратор */}
             <Route element={<RequireAuth roles={ROLES.ADMIN} />}>
-              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/users" element={gate('admin.users', <AdminUsers />)} />
               {/* BUG-071: «Приглашения» дублировали «Пользователей» — модули схлопнуты */}
               <Route path="/admin/invitations" element={<Navigate to="/admin/users?tab=invitations" replace />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/audit" element={<AdminAudit />} />
+              {/* Настройка прав ролей на разделы */}
+              <Route path="/admin/permissions" element={gate('admin.permissions', <AdminPermissions />)} />
+              <Route path="/admin/settings" element={gate('admin.settings', <AdminSettings />)} />
+              <Route path="/admin/audit" element={gate('admin.audit', <AdminAudit />)} />
             </Route>
 
             {/* BUG-008: CMS-страницы больше не отдают 404 */}

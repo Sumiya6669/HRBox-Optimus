@@ -38,6 +38,9 @@ const entities = {
   OnboardingTask: createEntity('onboarding_tasks'),
   Page: createEntity('pages', { defaultSort: '-updated_date' }),
   Invitation: createEntity('invitations', { defaultSort: '-created_date' }),
+  // Права ролей на разделы. Ключ составной (role + section_key), поэтому
+  // обычный idColumn не подходит — читаем список, пишем через set_role_permissions.
+  RolePermission: createEntity('role_permissions', { defaultSort: 'section_key', idColumn: 'section_key' }),
   Process: createEntity('processes', { defaultSort: 'sort_order' }),
   ProcessCategory: createEntity('process_categories', { defaultSort: 'sort_order' }),
   ProcessStage: createEntity('process_stages', { defaultSort: 'sort_order' }),
@@ -205,6 +208,46 @@ async function edgeFunctionError(error, fallback) {
 /* ----------------------------------------------------------------- users */
 
 const users = {
+  /**
+   * Создание учётной записи вручную: администратор сам задаёт логин и пароль.
+   *
+   * Нужно там, где приглашения не работают: у человека нет рабочей почты, SMTP
+   * не настроен, или учётку надо выдать здесь и сейчас — новому сотруднику на
+   * месте. Пароль передаётся лично, человек меняет его в профиле.
+   *
+   * Заодно заводится карточка сотрудника: без неё личный кабинет пустой —
+   * KPI, цели, отпуск и уведомления привязаны к employee_id, а не к учётке.
+   */
+  async createUser({
+    email, password, fullName, role = 'employee',
+    position, phone, departmentId, branchId, hireDate,
+    employeeId, createEmployee = true,
+  } = {}) {
+    const { data, error } = await supabase.functions.invoke('create-user', {
+      body: {
+        email: email?.trim().toLowerCase(),
+        password,
+        full_name: fullName?.trim(),
+        role,
+        position: position?.trim() || null,
+        phone: phone?.trim() || null,
+        department_id: departmentId || null,
+        branch_id: branchId || null,
+        hire_date: hireDate || null,
+        employee_id: employeeId || null,
+        create_employee: createEmployee,
+      },
+    });
+    if (error) {
+      throw await edgeFunctionError(
+        error,
+        'Не удалось создать пользователя. Проверьте, что функция create-user развёрнута в Supabase.'
+      );
+    }
+    if (data?.error) throw new DataError(data.error, { status: 400 });
+    return data;
+  },
+
   /**
    * Приглашение письмом. Требует настроенного SMTP в Supabase: встроенный
    * почтовик ограничен несколькими письмами в час. Если письмо уйти не может,
@@ -426,6 +469,32 @@ const rpc = {
   registerPageView(slug) {
     if (!slug) return Promise.resolve();
     return Promise.resolve(supabase.rpc('register_page_view', { p_slug: slug })).catch(() => {});
+  },
+
+  /**
+   * Права текущего пользователя на разделы портала: {"admin.users": true, ...}.
+   * Отсутствие ключа означает «по умолчанию разрешено на уровне роли».
+   */
+  async myPermissions() {
+    const { data, error } = await supabase.rpc('my_permissions');
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
+  },
+
+  /**
+   * Сохранение прав одной роли целиком, одной транзакцией.
+   *
+   * Именно целиком, а не по галочке: оборвавшееся на середине сохранение
+   * оставило бы роль в состоянии «половина разделов по-новому», и понять,
+   * что применилось, стало бы невозможно.
+   */
+  async setRolePermissions(role, sections) {
+    const { data, error } = await supabase.rpc('set_role_permissions', {
+      p_role: role,
+      p_sections: sections,
+    });
+    if (error) throw new DataError(error.message, { status: error.status, code: error.code });
+    return data || {};
   },
 
   /** Баланс кошелька сотрудника, посчитанный на сервере. */

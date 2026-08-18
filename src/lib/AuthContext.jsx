@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { api } from '@/api/client';
 import { supabase } from '@/api/supabase';
+import { evaluateAccess } from '@/lib/sections';
 
 /**
  * Аутентификация портала на Supabase Auth.
@@ -34,11 +35,14 @@ export const AuthProvider = ({ children }) => {
   const [employee, setEmployee] = useState(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState(null);
+  // Права на разделы, настроенные администратором. null = «ещё не загрузили».
+  const [permissions, setPermissions] = useState(null);
 
   const loadProfile = useCallback(async (activeSession) => {
     if (!activeSession) {
       setUser(null);
       setEmployee(null);
+      setPermissions(null);
       setAuthError(null);
       setIsLoadingAuth(false);
       return;
@@ -47,6 +51,10 @@ export const AuthProvider = ({ children }) => {
       const profile = await api.auth.me();
       setUser(profile);
       setAuthError(null);
+      // Права грузим отдельно и не роняем вход, если запрос не удался:
+      // при пустом ответе действуют значения по умолчанию из кода, то есть
+      // портал ведёт себя ровно так, как до появления настройки прав.
+      setPermissions(await api.rpc.myPermissions().catch(() => ({})));
       // Связь User ↔ Employee (P0 из аудита): без неё личный кабинет остаётся пустым.
       if (profile?.employee_id) {
         const emp = await api.entities.Employee.get(profile.employee_id).catch(() => null);
@@ -65,6 +73,7 @@ export const AuthProvider = ({ children }) => {
       }
       setUser(null);
       setEmployee(null);
+      setPermissions(null);
     } finally {
       setIsLoadingAuth(false);
     }
@@ -85,6 +94,7 @@ export const AuthProvider = ({ children }) => {
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setEmployee(null);
+        setPermissions(null);
         setIsLoadingAuth(false);
         return;
       }
@@ -116,6 +126,16 @@ export const AuthProvider = ({ children }) => {
     [role]
   );
 
+  /**
+   * Доступен ли раздел текущему пользователю. Решение живёт в sections.js
+   * отдельной чистой функцией: на неё опираются и меню, и роутер, и тесты —
+   * раньше похожие проверки были в трёх местах и расходились между собой.
+   */
+  const canAccess = useCallback(
+    (sectionKey) => evaluateAccess(sectionKey, role, permissions),
+    [permissions, role]
+  );
+
   const value = useMemo(
     () => ({
       session,
@@ -128,13 +148,15 @@ export const AuthProvider = ({ children }) => {
       isLoadingAuth,
       authError,
       hasRole,
+      permissions,
+      canAccess,
       isAdmin: hasRole(ROLES.ADMIN),
       isHR: hasRole(ROLES.HR),
       isManager: hasRole(ROLES.MANAGER),
       logout,
       refresh: () => loadProfile(session),
     }),
-    [session, user, employee, role, isLoadingAuth, authError, hasRole, logout, loadProfile]
+    [session, user, employee, role, isLoadingAuth, authError, hasRole, permissions, canAccess, logout, loadProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

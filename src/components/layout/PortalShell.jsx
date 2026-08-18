@@ -6,7 +6,7 @@ import {
   Briefcase, GraduationCap, Target, TrendingUp, CalendarDays, Wallet, BookOpen,
   Award, FileText, Star, FolderOpen, Newspaper, BarChart3, Users, Building2, Workflow, Inbox,
   MessageSquare, Zap, Store, ClipboardList, ScrollText, PanelLeftClose,
-  PanelLeftOpen, Layers, FileBarChart, Loader2, CheckCheck, CornerDownLeft,
+  PanelLeftOpen, Layers, FileBarChart, Loader2, CheckCheck, CornerDownLeft, ShieldCheck,
 } from "lucide-react";
 
 import { api } from "@/api/client";
@@ -30,72 +30,73 @@ const ZONES = [
  */
 const NAV = {
   company: [
-    { label: "dashboard", path: "/", icon: LayoutDashboard },
-    { label: "nav_page_about", path: "/about", icon: Building2 },
-    { label: "nav_page_vacation_policy", path: "/vacation-policy", icon: CalendarDays },
-    { label: "nav_page_ethics", path: "/ethics", icon: ScrollText },
+    { label: "dashboard", path: "/", perm: "company.home", icon: LayoutDashboard },
+    { label: "nav_page_about", path: "/about", perm: "company.home", icon: Building2 },
+    { label: "nav_page_vacation_policy", path: "/vacation-policy", perm: "company.home", icon: CalendarDays },
+    { label: "nav_page_ethics", path: "/ethics", perm: "company.home", icon: ScrollText },
   ],
   cabinet: [
-    { label: "dashboard", path: "/cabinet", icon: LayoutDashboard },
+    { label: "dashboard", path: "/cabinet", perm: "cabinet.dashboard", icon: LayoutDashboard },
     { section: "section_my_work" },
-    { label: "nav_requests", path: "/cabinet/requests", icon: ClipboardList },
-    { label: "nav_processes", path: "/cabinet/processes", icon: Workflow },
-    { label: "nav_my_process_requests", path: "/cabinet/processes/requests", icon: Inbox },
-    { label: "nav_goals", path: "/cabinet/goals", icon: Target },
-    { label: "nav_kpi", path: "/cabinet/kpi", icon: Zap },
-    { label: "nav_development", path: "/cabinet/development", icon: TrendingUp },
-    { label: "nav_vacation", path: "/cabinet/vacation", icon: CalendarDays },
+    { label: "nav_requests", path: "/cabinet/requests", perm: "cabinet.requests", icon: ClipboardList },
+    { label: "nav_processes", path: "/cabinet/processes", perm: "cabinet.processes", icon: Workflow },
+    { label: "nav_my_process_requests", path: "/cabinet/processes/requests", perm: "cabinet.processes", icon: Inbox },
+    { label: "nav_goals", path: "/cabinet/goals", perm: "cabinet.goals", icon: Target },
+    { label: "nav_kpi", path: "/cabinet/kpi", perm: "cabinet.kpi", icon: Zap },
+    { label: "nav_development", path: "/cabinet/development", perm: "cabinet.development", icon: TrendingUp },
+    { label: "nav_vacation", path: "/cabinet/vacation", perm: "cabinet.vacation", icon: CalendarDays },
     { section: "section_knowledge" },
-    { label: "learning", path: "/cabinet/learning", icon: GraduationCap },
-    { label: "nav_library", path: "/cabinet/library", icon: BookOpen },
-    { label: "nav_hr_documents", path: "/cabinet/documents", icon: FileText },
-    { label: "nav_files", path: "/cabinet/files", icon: FolderOpen },
+    { label: "learning", path: "/cabinet/learning", perm: "cabinet.learning", icon: GraduationCap },
+    { label: "nav_library", path: "/cabinet/library", perm: "cabinet.library", icon: BookOpen },
+    { label: "nav_hr_documents", path: "/cabinet/documents", perm: "cabinet.documents", icon: FileText },
+    { label: "nav_files", path: "/cabinet/files", perm: "cabinet.files", icon: FolderOpen },
     { section: "section_company_life" },
-    { label: "nav_news", path: "/cabinet/news", icon: Newspaper },
-    { label: "nav_calendar", path: "/cabinet/calendar", icon: CalendarDays },
-    { label: "nav_surveys", path: "/cabinet/surveys", icon: BarChart3 },
-    { label: "nav_feedback", path: "/cabinet/feedback", icon: MessageSquare },
+    { label: "nav_news", path: "/cabinet/news", perm: "cabinet.news", icon: Newspaper },
+    { label: "nav_calendar", path: "/cabinet/calendar", perm: "cabinet.calendar", icon: CalendarDays },
+    { label: "nav_surveys", path: "/cabinet/surveys", perm: "cabinet.surveys", icon: BarChart3 },
+    { label: "nav_feedback", path: "/cabinet/feedback", perm: "cabinet.feedback", icon: MessageSquare },
     { section: "section_recognition" },
-    { label: "nav_wallet", path: "/cabinet/wallet", icon: Wallet },
-    { label: "nav_store", path: "/cabinet/store", icon: Store },
+    { label: "nav_wallet", path: "/cabinet/wallet", perm: "cabinet.wallet", icon: Wallet },
+    { label: "nav_store", path: "/cabinet/store", perm: "cabinet.store", icon: Store },
     { section: "section_personal" },
-    { label: "nav_favorites", path: "/cabinet/favorites", icon: Star },
-    { label: "nav_notifications", path: "/cabinet/notifications", icon: Bell, badgeKey: "notifications" },
-    { label: "nav_profile", path: "/cabinet/profile", icon: Settings },
+    { label: "nav_favorites", path: "/cabinet/favorites", perm: "cabinet.favorites", icon: Star },
+    { label: "nav_notifications", path: "/cabinet/notifications", perm: "cabinet.notifications", icon: Bell, badgeKey: "notifications" },
+    { label: "nav_profile", path: "/cabinet/profile", perm: "cabinet.profile", icon: Settings },
   ],
   admin: [
-    { label: "nav_overview", path: "/admin", icon: LayoutDashboard },
+    { label: "nav_overview", path: "/admin", perm: "admin.overview", icon: LayoutDashboard },
     { section: "section_hr" },
-    { label: "employees", path: "/admin/employees", icon: Briefcase },
-    { label: "nav_departments", path: "/admin/departments", icon: Building2 },
-    { label: "nav_users", path: "/admin/users", icon: Users, role: ROLES.ADMIN },
+    { label: "employees", path: "/admin/employees", perm: "admin.employees", icon: Briefcase },
+    { label: "nav_departments", path: "/admin/departments", perm: "admin.departments", icon: Building2 },
+    { label: "nav_users", path: "/admin/users", perm: "admin.users", icon: Users, role: ROLES.ADMIN },
+    { label: "nav_permissions", path: "/admin/permissions", perm: "admin.permissions", icon: ShieldCheck, role: ROLES.ADMIN },
     { section: "section_content" },
-    { label: "nav_news", path: "/admin/news", icon: Newspaper },
-    { label: "nav_pages", path: "/admin/pages", icon: FileText },
-    { label: "nav_files", path: "/admin/files", icon: FolderOpen },
+    { label: "nav_news", path: "/admin/news", perm: "admin.news", icon: Newspaper },
+    { label: "nav_pages", path: "/admin/pages", perm: "admin.pages", icon: FileText },
+    { label: "nav_files", path: "/admin/files", perm: "admin.files", icon: FolderOpen },
     { section: "section_learning" },
-    { label: "nav_courses", path: "/admin/courses", icon: GraduationCap },
-    { label: "nav_library", path: "/admin/library", icon: BookOpen },
+    { label: "nav_courses", path: "/admin/courses", perm: "admin.courses", icon: GraduationCap },
+    { label: "nav_library", path: "/admin/library", perm: "admin.library", icon: BookOpen },
     { section: "section_processes" },
-    { label: "nav_process_setup", path: "/admin/processes", icon: Workflow },
-    { label: "nav_process_requests", path: "/admin/process-requests", icon: Inbox },
+    { label: "nav_process_setup", path: "/admin/processes", perm: "admin.processes", icon: Workflow },
+    { label: "nav_process_requests", path: "/admin/process-requests", perm: "admin.process_requests", icon: Inbox },
     { section: "section_gamification" },
-    { label: "nav_achievements", path: "/admin/achievements", icon: Award },
-    { label: "nav_achievement_rules", path: "/admin/achievement-rules", icon: Zap },
-    { label: "nav_store", path: "/admin/store", icon: Store },
-    { label: "nav_wallet_ops", path: "/admin/wallet", icon: Wallet },
-    { label: "nav_wallet_reports", path: "/admin/wallet-reports", icon: BarChart3 },
-    { label: "nav_award_reasons", path: "/admin/award-reasons", icon: Award },
+    { label: "nav_achievements", path: "/admin/achievements", perm: "admin.achievements", icon: Award },
+    { label: "nav_achievement_rules", path: "/admin/achievement-rules", perm: "admin.achievement_rules", icon: Zap },
+    { label: "nav_store", path: "/admin/store", perm: "admin.store", icon: Store },
+    { label: "nav_wallet_ops", path: "/admin/wallet", perm: "admin.wallet", icon: Wallet },
+    { label: "nav_wallet_reports", path: "/admin/wallet-reports", perm: "admin.wallet_reports", icon: BarChart3 },
+    { label: "nav_award_reasons", path: "/admin/award-reasons", perm: "admin.award_reasons", icon: Award },
     { section: "section_surveys" },
-    { label: "nav_surveys", path: "/admin/surveys", icon: BarChart3 },
-    { label: "nav_survey_sessions", path: "/admin/survey-sessions", icon: Layers },
-    { label: "nav_survey_auto", path: "/admin/survey-auto", icon: Zap },
-    { label: "nav_survey_reports", path: "/admin/survey-reports", icon: FileBarChart },
+    { label: "nav_surveys", path: "/admin/surveys", perm: "admin.surveys", icon: BarChart3 },
+    { label: "nav_survey_sessions", path: "/admin/survey-sessions", perm: "admin.survey_sessions", icon: Layers },
+    { label: "nav_survey_auto", path: "/admin/survey-auto", perm: "admin.survey_auto", icon: Zap },
+    { label: "nav_survey_reports", path: "/admin/survey-reports", perm: "admin.survey_reports", icon: FileBarChart },
     { section: "section_vacation" },
-    { label: "nav_vacation", path: "/admin/vacation", icon: CalendarDays },
+    { label: "nav_vacation", path: "/admin/vacation", perm: "admin.vacation", icon: CalendarDays },
     { section: "section_system" },
-    { label: "settings", path: "/admin/settings", icon: Settings, role: ROLES.ADMIN },
-    { label: "nav_audit", path: "/admin/audit", icon: ScrollText, role: ROLES.ADMIN },
+    { label: "settings", path: "/admin/settings", perm: "admin.settings", icon: Settings, role: ROLES.ADMIN },
+    { label: "nav_audit", path: "/admin/audit", perm: "admin.audit", icon: ScrollText, role: ROLES.ADMIN },
   ],
 };
 
@@ -333,7 +334,7 @@ export default function PortalShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, lang, setLang } = useI18n();
-  const { user, employee, roleLabel, hasRole, logout } = useAuth();
+  const { user, employee, roleLabel, hasRole, canAccess, logout } = useAuth();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [zoneMenuOpen, setZoneMenuOpen] = useState(false);
@@ -352,10 +353,25 @@ export default function PortalShell() {
   });
   const unreadCount = (notifications || []).filter((n) => !n.read).length;
 
-  const nav = useMemo(
-    () => (NAV[zone] || []).filter((item) => !item.role || hasRole(item.role)),
-    [zone, hasRole]
-  );
+  /**
+   * Меню зоны с учётом роли и настроенных прав.
+   *
+   * Второй проход убирает заголовки групп, под которыми не осталось ни одного
+   * пункта: иначе после закрытия разделов в боковом меню оставались висеть
+   * пустые подписи вроде «Опросы» без единой ссылки.
+   */
+  const nav = useMemo(() => {
+    const visible = (NAV[zone] || []).filter((item) => {
+      if (item.section) return true; // заголовок группы — решаем на втором проходе
+      if (item.role && !hasRole(item.role)) return false;
+      return canAccess(item.perm);
+    });
+    return visible.filter((item, i) => {
+      if (!item.section) return true;
+      const next = visible[i + 1];
+      return !!next && !next.section;
+    });
+  }, [zone, hasRole, canAccess]);
 
   useEffect(() => { localStorage.setItem("sidebar-collapsed", String(collapsed)); }, [collapsed]);
   useEffect(() => { setMobileOpen(false); setNavSearch(""); }, [location.pathname]);
