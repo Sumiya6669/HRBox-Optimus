@@ -23,6 +23,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { mutationErrorMessage } from '@/lib/dataErrors';
 import { formatNumber } from '@/lib/format';
+import { useFormDraft } from '@/lib/useFormDraft';
 import { cn } from '@/lib/utils';
 
 /**
@@ -67,7 +68,10 @@ export default function AdminCourseBuilder() {
   const qc = useQueryClient();
 
   const [tab, setTab] = useState('lessons');
-  const [lessonDraft, setLessonDraft] = useState(null); // null = диалог закрыт
+  // Черновик урока переживает перезагрузку страницы: форма длинная, и потерять
+  // её из-за случайного обновления вкладки особенно обидно, когда видео уже
+  // загружено. Ключ включает id курса — черновики разных курсов не смешиваются.
+  const [lessonDraft, setLessonDraft, clearLessonDraft] = useFormDraft(`lesson:${id}`, null);
 
   /* ------------------------------------------------------------------ данные */
 
@@ -124,7 +128,7 @@ export default function AdminCourseBuilder() {
       return api.entities.CourseLesson.create({ ...payload, position });
     },
     onSuccess: () => {
-      setLessonDraft(null);
+      clearLessonDraft();
       invalidate();
       toast({ title: 'Урок сохранён' });
     },
@@ -308,7 +312,7 @@ export default function AdminCourseBuilder() {
       )}
 
       {/* Диалог урока */}
-      <Dialog open={!!lessonDraft} onOpenChange={(open) => !open && setLessonDraft(null)}>
+      <Dialog open={!!lessonDraft} onOpenChange={(open) => !open && clearLessonDraft()}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{lessonDraft?.id ? 'Редактирование урока' : 'Новый урок'}</DialogTitle>
@@ -384,7 +388,7 @@ export default function AdminCourseBuilder() {
           )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setLessonDraft(null)}>Отмена</Button>
+            <Button variant="outline" onClick={clearLessonDraft}>Отмена</Button>
             <Button
               onClick={() => saveLesson.mutate(lessonDraft)}
               disabled={!lessonDraft?.title?.trim() || saveLesson.isPending}
@@ -406,7 +410,8 @@ const EMPTY_QUESTION = { text: '', type: 'single', required: true, options: ['',
 function TestEditor({ courseId, test, onSaved }) {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [draft, setDraft] = useState(null);
+  // Тот же приём для вопроса: варианты ответа набирать заново — долго.
+  const [draft, setDraft, clearDraft] = useFormDraft(`question:${courseId}`, null);
 
   const questionsQuery = useQuery({
     queryKey: ['test-questions', test?.id],
@@ -492,7 +497,7 @@ function TestEditor({ courseId, test, onSaved }) {
       return questionId;
     },
     onSuccess: () => {
-      setDraft(null);
+      clearDraft();
       qc.invalidateQueries({ queryKey: ['test-questions', test?.id] });
       qc.invalidateQueries({ queryKey: ['test-options'] });
       toast({ title: 'Вопрос сохранён' });
@@ -666,7 +671,7 @@ function TestEditor({ courseId, test, onSaved }) {
       </Card>
 
       {/* Диалог вопроса */}
-      <Dialog open={!!draft} onOpenChange={(open) => !open && setDraft(null)}>
+      <Dialog open={!!draft} onOpenChange={(open) => !open && clearDraft()}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{draft?.id ? 'Редактирование вопроса' : 'Новый вопрос'}</DialogTitle>
@@ -755,7 +760,7 @@ function TestEditor({ courseId, test, onSaved }) {
           )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDraft(null)}>Отмена</Button>
+            <Button variant="outline" onClick={clearDraft}>Отмена</Button>
             <Button
               onClick={() => saveQuestion.mutate(draft)}
               disabled={!draft?.text?.trim() || saveQuestion.isPending}

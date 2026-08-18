@@ -35,6 +35,7 @@ export default function MediaUpload({
   const [error, setError] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState(null);
+  const [progress, setProgress] = useState(null); // { sent, total }
 
   const fieldId = id || 'media-upload';
 
@@ -42,9 +43,14 @@ export default function MediaUpload({
     if (!file) return;
     setError(null);
     setBusy(true);
+    setProgress({ sent: 0, total: file.size });
     try {
       const previousPath = path;
-      const { file_url, path: newPath } = await api.storage.uploadVideo({ file, folder });
+      const { file_url, path: newPath } = await api.storage.uploadVideo({
+        file,
+        folder,
+        onProgress: (sent, total) => setProgress({ sent, total }),
+      });
       setFileName(file.name);
       onChange?.({ url: file_url, path: newPath });
       // Старый файл убираем ПОСЛЕ успешной загрузки нового: если удалить
@@ -54,9 +60,12 @@ export default function MediaUpload({
       setError(e?.message || 'Не удалось загрузить файл');
     } finally {
       setBusy(false);
+      setProgress(null);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
+
+  const percent = progress?.total ? Math.round((progress.sent / progress.total) * 100) : 0;
 
   const clear = async () => {
     const previousPath = path;
@@ -103,12 +112,35 @@ export default function MediaUpload({
           )}
         >
           {busy ? (
-            <>
-              <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
-              <p className="text-sm text-muted-foreground">
-                Загружаю файл. Большое видео может идти несколько минут — не закрывайте страницу.
+            <div className="w-full max-w-sm space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+                <span className="text-sm font-medium text-foreground tabular-nums">{percent}%</span>
+              </div>
+              {/* Полоса, а не только крутилка: на 500 МБ человеку нужно видеть,
+                  что загрузка идёт, иначе через минуту он решит, что всё зависло. */}
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuenow={percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Загрузка файла"
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-300"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {progress ? `${formatFileSize(progress.sent)} из ${formatFileSize(progress.total)}` : ''}
+                {' · '}не закрывайте страницу
               </p>
-            </>
+              <p className="text-[11px] text-muted-foreground">
+                Файл идёт кусками: если связь оборвётся, загрузка продолжится с места обрыва,
+                а не начнётся заново.
+              </p>
+            </div>
           ) : (
             <>
               <Video className="h-8 w-8 text-muted-foreground/60" aria-hidden="true" />

@@ -353,13 +353,22 @@ const storage = {
   },
 
   /**
-   * Загрузка видеоурока файлом.
+   * Загрузка видеоурока файлом — до 500 МБ.
    *
-   * Лимит держим на 500 МБ — столько разрешает бакет. Проверяем размер ДО
-   * отправки: иначе человек ждёт десять минут, чтобы в конце получить отказ
-   * от сервера, и не понимает, что именно пошло не так.
+   * ПОЧЕМУ НЕ ОБЫЧНАЯ ЗАГРУЗКА. Простой POST отправляет файл одним куском: на
+   * 500 МБ это десятки минут, и любой обрыв — потерянный шлюзом пакет, уснувший
+   * ноутбук, переключение с Wi-Fi на мобильный интернет — начинает всё заново.
+   * На нестабильной связи такая загрузка не заканчивается никогда.
+   *
+   * Поэтому файл идёт кусками по 6 МБ по протоколу возобновляемой загрузки
+   * (tus), который поддерживает само хранилище Supabase. Оборвалось — докачиваем
+   * с места обрыва, а не с нуля. Заодно появляется честный процент выполнения:
+   * без него человек десять минут смотрит на крутилку и не знает, идёт ли дело.
+   *
+   * Мелкие файлы (до 6 МБ) отправляем обычным способом: возобновление им ничего
+   * не даёт, а лишний обмен заголовками только замедляет.
    */
-  async uploadVideo({ file, folder = 'lessons', maxBytes = 500 * 1024 * 1024 }) {
+  async uploadVideo({ file, folder = 'lessons', maxBytes = 500 * 1024 * 1024, onProgress } = {}) {
     if (!file) throw new DataError('Файл не выбран', { status: 400 });
     const ok = /^video\//.test(file.type || '') || file.type === 'application/pdf';
     if (!ok) {
@@ -371,7 +380,63 @@ const storage = {
         { status: 400 }
       );
     }
-    return storage.upload({ file, folder, bucket: MEDIA_BUCKET });
+
+    const CHUNK = 6 * 1024 * 1024;
+    if (file.size <= CHUNK) {
+      onProgress?.(0, file.size);
+      const result = await storage.upload({ file, folder, bucket: MEDIA_BUCKET });
+      onProgress?.(file.size, file.size);
+      return result;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const uid = sessionData?.session?.user?.id;
+    if (!token || !uid) throw new DataError('Требуется вход в систему', { status: 401 });
+
+    const safeName = file.name.replace(/[^\w.-]+/g, '_');
+    const path = `${folder}/${uid}/${Date.now()}-${safeName}`;
+
+    // Библиотека тянется динамически: она нужна только на экране загрузки
+    // видео, и держать её в основном бандле ради этого не стоит.
+    const { Upload } = await import('tus-js-client');
+
+    await new Promise((resolve, reject) => {
+      const upload = new Upload(file, {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        headers: {
+          authorization: `Bearer ${token}`,
+          'x-upsert': 'false',
+        },
+        uploadDataDuringCreation: true,
+        // Обязательно фиксированный размер куска: у хранилища Supabase он
+        // должен быть ровно 6 МБ, иначе сервер отклоняет части.
+        chunkSize: CHUNK,
+        removeFingerprintOnSuccess: true,
+        metadata: {
+          bucketName: MEDIA_BUCKET,
+          objectName: path,
+          contentType: file.type || 'application/octet-stream',
+          cacheControl: '3600',
+        },
+        onError: (error) => reject(
+          new DataError(error?.message || 'Не удалось загрузить файл', { status: 0 })
+        ),
+        onProgress: (sent, total) => onProgress?.(sent, total),
+        onSuccess: resolve,
+      });
+
+      // Если этот файл уже начинали грузить в этой сессии — продолжаем с места
+      // обрыва вместо повторной отправки всего объёма.
+      upload.findPreviousUploads().then((previous) => {
+        if (previous.length) upload.resumeFromPreviousUpload(previous[0]);
+        upload.start();
+      });
+    });
+
+    const { data: pub } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+    return { file_url: pub.publicUrl, path, bucket: MEDIA_BUCKET };
   },
   /**
    * Загрузка изображения с проверкой типа и размера.

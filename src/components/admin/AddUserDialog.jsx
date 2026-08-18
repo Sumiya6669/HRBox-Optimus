@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { ROLE_LABELS } from '@/lib/AuthContext';
 import { mutationErrorMessage } from '@/lib/dataErrors';
+import { useFormDraft } from '@/lib/useFormDraft';
 
 /**
  * Добавление пользователя тремя способами.
@@ -52,6 +53,14 @@ function generatePassword(length = 12) {
   return Array.from(bytes, (n) => alphabet[n % alphabet.length]).join('');
 }
 
+/**
+ * Пароля в этом объекте НЕТ намеренно.
+ *
+ * Черновик формы сохраняется в хранилище браузера, чтобы случайная перезагрузка
+ * не заставляла заполнять всё заново. Пароль туда попадать не должен: он остался
+ * бы лежать открытым текстом в хранилище вкладки. Поэтому он живёт в отдельном
+ * состоянии и никуда не пишется.
+ */
 const EMPTY = {
   email: '',
   fullName: '',
@@ -61,13 +70,13 @@ const EMPTY = {
   branchId: '',
   hireDate: '',
   role: 'employee',
-  password: '',
 };
 
 export default function AddUserDialog({ open, onOpenChange, onCreated }) {
   const { toast } = useToast();
   const [mode, setMode] = useState('direct');
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm, clearForm] = useFormDraft('new-user', EMPTY);
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState(false);
   const [link, setLink] = useState(null);
@@ -89,13 +98,14 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
 
   const emailValid = EMAIL_RE.test(form.email.trim());
   const nameValid = form.fullName.trim().length >= 3;
-  const passwordValid = form.password.length >= 8;
+  const passwordValid = password.length >= 8;
 
   const directValid = emailValid && nameValid && passwordValid;
   const linkValid = !form.email.trim() || emailValid;
 
   const reset = () => {
-    setForm(EMPTY);
+    clearForm();
+    setPassword('');
     setTouched(false);
     setLink(null);
     setCopied(false);
@@ -112,7 +122,7 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
     mutationFn: () =>
       api.users.createUser({
         email: form.email,
-        password: form.password,
+        password,
         fullName: form.fullName,
         role: form.role,
         position: form.position,
@@ -124,7 +134,7 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
     onSuccess: (data) => {
       // Диалог не закрываем: пароль показан один раз, и закрыв окно, восстановить
       // его нельзя — только сбросить. Администратор сам решит, когда он его записал.
-      setCreated({ ...data, password: form.password });
+      setCreated({ ...data, password });
       onCreated?.();
       toast({ title: 'Пользователь создан', description: data.email });
     },
@@ -392,8 +402,8 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
                         id="new-user-password"
                         type={showPassword ? 'text' : 'password'}
                         className="min-h-[40px] font-mono"
-                        value={form.password}
-                        onChange={set('password')}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         onBlur={() => setTouched(true)}
                         aria-invalid={touched && !passwordValid}
                         autoComplete="new-password"
@@ -414,7 +424,7 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
                         type="button"
                         variant="outline"
                         className="min-h-[40px] shrink-0"
-                        onClick={() => { setForm((f) => ({ ...f, password: generatePassword() })); setShowPassword(true); }}
+                        onClick={() => { setPassword(generatePassword()); setShowPassword(true); }}
                       >
                         <RefreshCw className="mr-1 h-4 w-4" aria-hidden="true" /> Сгенерировать
                       </Button>
